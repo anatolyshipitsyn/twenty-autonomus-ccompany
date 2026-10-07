@@ -8,6 +8,7 @@ AI orchestrator: Twenty Workflows → AI Run Journal ↔ NestJS worker → Codex
 - [Workflows and protocol](docs/requirements/protocol.md)
 - [Operations](docs/requirements/operations.md)
 - [Acceptance](docs/requirements/acceptance.md)
+- [Notion knowledge base](docs/knowledge-base.md) · [Russian guide](docs/knowledge-base.ru.md)
 - [Docker Compose setup](docs/local-environment.md)
 
 For Codex: [AGENTS.md](AGENTS.md) provides concise rules and task-based document routing. The requirements register and topic contracts form the full specification; read one language version and the relevant sections.
