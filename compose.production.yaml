@@ -1,0 +1,18 @@
+# Production inputs must be supplied by .env / --env-file or shell environment.
+x-production-environment: &production-environment
+  SERVER_URL: ${SERVER_URL:?Set the public HTTPS URL}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set a private key generated with openssl rand -base64 32}
+  PG_DATABASE_URL: postgres://${PG_DATABASE_USER:-postgres}:${PG_DATABASE_PASSWORD:?Set a strong alphanumeric database password}@db:5432/${PG_DATABASE_NAME:-default}
+x-production-database: &production-database
+  POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD:?Set a strong alphanumeric database password}
+
+services:
+  # Remove the local bootstrap service inherited from compose.yaml.
+  bootstrap: !reset null
+  server:
+    environment:
+      <<: *production-environment
+  worker:
+    environment: *production-environment
+  db:
+    environment: *production-database
