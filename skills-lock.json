@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "develop-app": {
+      "source": "twentyhq/twenty",
+      "ref": "agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/develop-app/SKILL.md",
+      "computedHash": "2fd3ee407aa44a87faa74848f0669ba6a29107d6ae9b3984284b41d8653aaf79"
+    }
+  }
+}
