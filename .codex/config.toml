@@ -1,0 +1,3 @@
+[mcp_servers.twenty]
+url = "http://autonomous-company.localhost:3000/mcp"
+http_headers_helper = "python3 .codex/twenty-mcp-auth-header.py"

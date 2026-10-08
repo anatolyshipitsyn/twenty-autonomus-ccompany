@@ -79,6 +79,8 @@ Session groups task attempts; assignment spans retain agentKey/assignmentVersion
 
 Before implementation, record actual Twenty server/SDK/plan, Codex protocol, and Langfuse SDK/API versions.
 
+Current evidence: [compatibility gate assessment](../evidence/compatibility-gate.md) (partial; not passed).
+
 Validate:
 
 - the private app

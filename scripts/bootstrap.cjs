@@ -4,6 +4,7 @@
 require('reflect-metadata');
 
 const { join } = require('node:path');
+const { open, readFile, chmod } = require('node:fs/promises');
 const { NestFactory } = require('@nestjs/core');
 const { DataSource, IsNull } = require('typeorm');
 
@@ -40,6 +41,9 @@ const {
   UserWorkspaceEntity,
   RoleEntity,
   RoleTargetEntity,
+  ApiKeyService,
+  JwtWrapperService,
+  JwtTokenTypeEnum,
 } = loadTwentyExports({
   CommandModule: 'command/command.module',
   MetadataEventEmitter: 'engine/subscriptions/metadata-event/metadata-event-emitter',
@@ -57,6 +61,9 @@ const {
   UserWorkspaceEntity: 'engine/core-modules/user-workspace/user-workspace.entity',
   RoleEntity: 'engine/metadata-modules/role/role.entity',
   RoleTargetEntity: 'engine/metadata-modules/role-target/role-target.entity',
+  ApiKeyService: 'engine/core-modules/api-key/services/api-key.service',
+  JwtWrapperService: 'engine/core-modules/jwt/services/jwt-wrapper.service',
+  JwtTokenTypeEnum: 'engine/core-modules/auth/types/jwt-token-type.enum',
 });
 
 const STATE_KEY = 'LOCAL_ADMIN_BOOTSTRAP_STATE';
@@ -67,6 +74,7 @@ const GLOBAL_SCOPE = {
   workspaceId: null,
 };
 const DEMO_OBJECTS = ['company', 'person', 'opportunity', 'workflow', 'dashboard'];
+const LOCAL_API_KEY_NAME = 'Codex Local MCP';
 
 async function bootstrap() {
   const config = readConfiguration();
@@ -93,10 +101,11 @@ async function bootstrap() {
     const state = await readCompletedState(keyValuePairs, config);
     const { account, newlyCreated } = await getOrCreateAccount(app, config, state);
 
-    await verifyAdminRole(app, account);
+    const adminRole = await verifyAdminRole(app, account);
     await finishProfile(app, account, config);
     await clearOnboarding(keyValuePairs, account);
     await verifyAccount(app, account, newlyCreated);
+    await ensureLocalMcpApiKey(app, account.workspace, adminRole);
 
     await keyValuePairs.set({
       ...GLOBAL_SCOPE,
@@ -379,6 +388,149 @@ async function verifyAdminRole(app, { user, workspace }) {
   });
   if (!roleAssignment) {
     throw new Error('Bootstrap administrator role is missing');
+  }
+  return adminRole;
+}
+
+async function ensureLocalMcpApiKey(app, workspace, adminRole) {
+  const existingToken = await readApiKeyFromEnvironment();
+  const apiKeyService = app.get(ApiKeyService);
+  const previousPayload = existingToken
+    ? await getUsableApiKeyPayload(app, apiKeyService, existingToken, workspace.id)
+    : null;
+  const activeKeys = await apiKeyService.findActiveByWorkspaceId(workspace.id);
+  const previousApiKey = previousPayload
+    ? activeKeys.find(key => key.id === previousPayload.jti)
+    : null;
+
+  if (previousApiKey?.name === LOCAL_API_KEY_NAME) {
+    console.log('Existing local MCP API key is valid for the bootstrapped workspace');
+    return;
+  }
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 100 * 365);
+  const apiKey = await apiKeyService.create({
+    name: LOCAL_API_KEY_NAME,
+    expiresAt,
+    workspaceId: workspace.id,
+    roleId: adminRole.id,
+  });
+
+  let generatedToken;
+  try {
+    const tokenResult = await apiKeyService.generateApiKeyToken(
+      workspace.id,
+      apiKey.id,
+      expiresAt,
+    );
+    if (!tokenResult?.token) {
+      throw new Error('Twenty did not return an API key token');
+    }
+    generatedToken = tokenResult.token;
+  } catch (error) {
+    await apiKeyService.revoke(apiKey.id, workspace.id);
+    throw error;
+  }
+
+  try {
+    await storeApiKeyInEnvironment(generatedToken);
+  } catch (error) {
+    await apiKeyService.revoke(apiKey.id, workspace.id);
+    throw error;
+  }
+
+  const keysToRevoke = new Set(
+    activeKeys
+      .filter(key => key.id !== apiKey.id && key.name === LOCAL_API_KEY_NAME)
+      .map(key => key.id),
+  );
+  if (previousApiKey) keysToRevoke.add(previousApiKey.id);
+  for (const keyId of keysToRevoke) {
+    await apiKeyService.revoke(keyId, workspace.id);
+  }
+  console.log('Created and saved TWENTY_API_KEY in the project .env');
+}
+
+async function readApiKeyFromEnvironment() {
+  const envPath = process.env.BOOTSTRAP_ENV_FILE;
+  if (!envPath) {
+    throw new Error('BOOTSTRAP_ENV_FILE is required to read the project API key');
+  }
+
+  let contents;
+  try {
+    contents = await readFile(envPath, 'utf8');
+  } catch {
+    throw new Error('Could not read the mounted project .env file');
+  }
+
+  for (const line of contents.split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?TWENTY_API_KEY\s*=\s*(.*?)\s*$/);
+    if (!match) continue;
+    const value = match[1].replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, (_, doubleQuoted, singleQuoted) =>
+      doubleQuoted ?? singleQuoted,
+    );
+    return value.trim() || null;
+  }
+  return null;
+}
+
+async function storeApiKeyInEnvironment(token) {
+  const envPath = process.env.BOOTSTRAP_ENV_FILE;
+  if (!envPath) {
+    throw new Error('BOOTSTRAP_ENV_FILE is required to save the local API key');
+  }
+
+  let original;
+  try {
+    original = await readFile(envPath, 'utf8');
+  } catch {
+    throw new Error('Could not read the mounted project .env file');
+  }
+
+  const assignment = /^\s*(?:export\s+)?TWENTY_API_KEY\s*=.*$/;
+  const lines = original.split(/\r?\n/);
+  const replacement = `TWENTY_API_KEY=${token}`;
+  let inserted = false;
+  const updatedLines = lines.flatMap(line => {
+    if (!assignment.test(line)) return [line];
+    if (inserted) return [];
+    inserted = true;
+    return [replacement];
+  });
+  if (!inserted) updatedLines.push(replacement);
+  let updated = updatedLines.join('\n');
+  if (original.endsWith('\n') || original.endsWith('\r')) updated += '\n';
+
+  let file;
+  try {
+    await chmod(envPath, 0o600);
+    file = await open(envPath, 'r+');
+    await file.writeFile(updated, 'utf8');
+    await file.truncate(Buffer.byteLength(updated, 'utf8'));
+    await file.sync();
+  } catch {
+    throw new Error('Could not write TWENTY_API_KEY to the mounted project .env file');
+  } finally {
+    await file?.close();
+  }
+}
+
+async function getUsableApiKeyPayload(app, apiKeyService, token, workspaceId) {
+  try {
+    const payload = await app.get(JwtWrapperService).verifyJwtToken(token);
+    if (
+      payload?.type !== JwtTokenTypeEnum.API_KEY ||
+      payload.workspaceId !== workspaceId ||
+      typeof payload.jti !== 'string'
+    ) {
+      return null;
+    }
+    await apiKeyService.validateApiKey(payload.jti, workspaceId);
+    return payload;
+  } catch {
+    return null;
   }
 }
 

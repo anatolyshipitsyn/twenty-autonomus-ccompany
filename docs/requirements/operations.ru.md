@@ -79,6 +79,8 @@ Session группирует attempts задачи; assignment spans сохра�
 
 До реализации зафиксировать фактические версии Twenty server/SDK/plan, Codex protocol и Langfuse SDK/API.
 
+Текущие доказательства: [оценка compatibility gate](../evidence/compatibility-gate.ru.md) (частичная; gate не пройден).
+
 Проверить:
 
 - приватный app
