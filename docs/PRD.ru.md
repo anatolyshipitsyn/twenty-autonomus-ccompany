@@ -152,6 +152,20 @@ flowchart LR
 - lifecycle в Twenty
 - исполнение в worker
 
+Планируемая структура репозитория:
+
+```bash
+twenty-autonomus-ccompany/
+  docs/                 # PRD и контракты
+  compose.yaml          # локальный Twenty
+  apps/
+    twenty-app/         # самостоятельный пакет Twenty App
+  services/
+    worker/             # NestJS worker, если реализацию также держим здесь
+```
+
+Twenty App — самостоятельный пакет в `apps/twenty-app/`. `services/worker/` — планируемое место для worker, если его реализация также останется в этом репозитории; эта структура фиксирует план, а не подтверждает, что компоненты уже реализованы.
+
 Неизвестный исход блокирует очередь. Langfuse не блокирует выполнение. Точные гарантии — REQ-23–REQ-32 в [реестре](requirements.ru.md), [протокол](requirements/protocol.ru.md) и [восстановление](requirements/operations.ru.md).
 
 ## 8. Интерфейс оператора
