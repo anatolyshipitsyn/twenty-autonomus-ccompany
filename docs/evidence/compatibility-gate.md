@@ -8,7 +8,7 @@ Date: 8 October 2026 · Scope: pre-implementation checks in OPS compatibility ga
 
 The configured self-hosted Twenty server is healthy. Authenticated MCP access works with the locally stored `TWENTY_API_KEY`: the workspace exposes 28 standard object metadata names, one workspace member, two role definitions, and no workflows. The expected `AiTask`, `AiRun`, `AiRunJournal`, and `Project` objects are absent because their Twenty app has not yet been developed and installed; this is expected at the current stage, not evidence of server incompatibility. A scoped Company create/update/read-back/soft-delete probe passed, and follow-up searches found no remaining probe records.
 
-The gate remains **NOT PASSED — PARTIAL EVIDENCE**: the SDK is not pinned or installed; the app that defines contract-specific objects and workflows still needs development and installation; the API key role assignment and workspace plan/quotas are not exposed by the MCP toolset; and Codex app-server runtime lifecycle was not exercised. No app, custom object, or workflow was installed or changed. Two temporary Company records were soft-deleted during the previous probe; in the current run one additional record passed create/update/read-back/soft-delete, and the post-delete search found 0 visible records. The secret was not printed or recorded.
+The gate remains **NOT PASSED — PARTIAL EVIDENCE**: the SDK is not pinned or installed; the app that defines contract-specific objects and workflows still needs development and installation; the API key role assignment and workspace plan/quotas are not exposed by the MCP toolset; and Codex app-server runtime lifecycle was not exercised. No app, custom object, or workflow was installed or changed. Two temporary Company records were soft-deleted during the previous probe; in the current run one additional record passed create/update/read-back/soft-delete, and the post-delete search found 0 visible records. The local bootstrap also ran successfully against Twenty `v2.45.6` and reused the existing `Codex Local MCP` key; the new-key creation and `.env` write path was not exercised. The secret was not printed or recorded.
 
 ## Environment snapshot
 
@@ -49,6 +49,7 @@ The gate remains **NOT PASSED — PARTIAL EVIDENCE**: the SDK is not pinned or i
 - Authenticated MCP `initialize` / `tools/list` — protocol `2025-06-18`; server `Twenty MCP Server 0.1.0`; seven wrapper tools. Business methods were loaded with `learn_tools` and called through `execute_tool`.
 - Authenticated MCP metadata / roles / workflows — 28 standard object names; four contract objects are absent before app development/install; 2 roles; 0 workflows. Admin permits global read/update/delete/destroy and all tools; Member also permits broad global read/update/delete/destroy and all tools, but cannot be assigned to API keys. Key-role binding and plan are unavailable through this toolset.
 - Current temporary MCP Company probe — create, update, read-back, and soft-delete succeeded; an exact search after deletion found 0 visible records. One soft-deleted record remains reversible in Twenty. `TWENTY_API_KEY` was read from local `.env` and never printed.
+- `docker compose run --rm bootstrap` — completed successfully against Twenty `v2.45.6` and reused the existing local MCP API key without printing it. This verifies the bootstrap rerun/reuse path only; new-key creation and `.env` writing remain unverified.
 - `codex --version` — `codex-cli 0.160.1`.
 - `codex app-server generate-json-schema --experimental --out /tmp/twenty-compat-gate-codex-schema` — succeeded; generated schema is temporary and not committed.
 - `codex app-server --stdio` with `initialize` / `initialized` and EOF — exit 0; initialize response returned without an RPC error. This was a handshake probe, not a turn-lifecycle test.
@@ -56,7 +57,7 @@ The gate remains **NOT PASSED — PARTIAL EVIDENCE**: the SDK is not pinned or i
 - `yarn --version` — `4.13.0`.
 - SDK source checkout `a3e874920cfa319c7c8683e020b65795d6193af8` contains `twenty-sdk@2.46.0` with `engines.twenty >=2.40.0`, Node `^24.5.0`, and Yarn `^4.0.2`; the range includes server `v2.45.6`. The checkout has no `node_modules`; the package is not installed and no app build/install was run.
 - A temporary full Twenty checkout `yarn install --immutable` completed with peer-dependency warnings; `yarn.lock` remained unchanged. `nx build twenty-sdk --skip-nx-cache` started `twenty-shared:generateBarrels`, but the `tsx`/esbuild processes did not finish and the build was interrupted before reaching the SDK target. A direct Vite attempt from the earlier focused install could not resolve workspace import `twenty-shared/utils`. Temporary dependencies were removed; the Twenty checkout is clean.
-- `gh auth status` — GitHub tokens for all configured accounts are invalid; active account `anatolyshipitsyn` cannot be used to verify repository rights or PR behavior.
+- With network access enabled, `gh auth status` — logged in as active account `anatolyshipitsyn` with `repo` scope. `gh pr create` opened PR #6; `gh pr view` reports `MERGEABLE` / `CLEAN`, and `gh pr checks` reports no checks configured. This proves basic repository/PR access, not orchestrator publish idempotency.
 
 ## Remaining evidence needed
 
@@ -82,7 +83,7 @@ The operations contract lists a broader pre-implementation gate than the three S
 | Permissions, ingress, and secrets | MCP exposes Admin/Member roles with broad global permissions; API-key assignment and least-privilege remain unverified. Server is published on `127.0.0.1:3000`; unauthenticated GraphQL `__typename` returns 200 while REST metadata returns 403. Local key was not printed. | Partial / not verified |
 | Concurrent Dispatch and PENDING recovery | No orchestrator worker or Journal app is implemented | Not verified |
 | Codex handshake, questions, interrupt, history, shutdown | `initialize`/`initialized` succeeded and app-server exited on EOF; lifecycle RPCs were not called | Partial / not verified |
-| GitHub permissions and PR idempotency | Not tested; `gh auth status` reports the selected `anatolyshipitsyn` token is invalid | Not verified |
+| GitHub permissions and PR idempotency | Active `anatolyshipitsyn` access created PR #6; GitHub reports `MERGEABLE` / `CLEAN` and no checks are configured. Orchestrator publish idempotency was not tested. | Partial / not verified |
 | Native UI and quotas | Workspace plan/UI not inspected | Not verified |
 | Backup and restore | No backup/restore operation was run | Not verified |
 | Search/Logic Function/schedule limits, Journal pagination, IF/else, permission enforcement | Not tested against the pinned server and workspace plan | Not verified |

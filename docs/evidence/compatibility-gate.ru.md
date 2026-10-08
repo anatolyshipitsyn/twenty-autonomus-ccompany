@@ -8,7 +8,7 @@
 
 Настроенный self-hosted сервер Twenty работает. Авторизованный доступ к Twenty MCP работает с локально сохранённым `TWENTY_API_KEY`: workspace возвращает 28 имён стандартных объектов, одного участника, две роли и ноль workflow. Объекты `AiTask`, `AiRun`, `AiRunJournal` и `Project` отсутствуют, потому что приложение Twenty, которое их определяет, ещё не разработано и не установлено. На текущем этапе это ожидаемо и не указывает на несовместимость сервера. Ограниченная проверка Company create/update/read-back/soft-delete прошла; последующий поиск не нашёл временных записей.
 
-Gate остаётся **НЕ ПРОЙДЕН — ЧАСТИЧНЫЕ ДОКАЗАТЕЛЬСТВА**: SDK не закреплён и не установлен; приложение, определяющее контрактные объекты и workflow, ещё нужно разработать и установить; MCP не раскрывает назначенную API key роль и plan/квоты; runtime lifecycle Codex app-server не проверен. Приложение, custom object и workflow не устанавливались и не менялись. Во время предыдущей проверки две временные Company-записи были soft-delete; в текущем прогоне ещё одна запись прошла create/update/read-back/soft-delete, после удаления поиск вернул 0 видимых записей. Секрет не выводился и не сохранялся в отчёте.
+Gate остаётся **НЕ ПРОЙДЕН — ЧАСТИЧНЫЕ ДОКАЗАТЕЛЬСТВА**: SDK не закреплён и не установлен; приложение, определяющее контрактные объекты и workflow, ещё нужно разработать и установить; MCP не раскрывает назначенную API key роль и plan/квоты; runtime lifecycle Codex app-server не проверен. Приложение, custom object и workflow не устанавливались и не менялись. Во время предыдущей проверки две временные Company-записи были soft-delete; в текущем прогоне ещё одна запись прошла create/update/read-back/soft-delete, после удаления поиск вернул 0 видимых записей. Локальный bootstrap также успешно запущен с Twenty `v2.45.6` и повторно использовал существующий ключ `Codex Local MCP`; создание нового ключа и запись в `.env` этой проверкой не подтверждены. Секрет не выводился и не сохранялся в отчёте.
 
 ## Срез окружения
 
@@ -49,6 +49,7 @@ Gate остаётся **НЕ ПРОЙДЕН — ЧАСТИЧНЫЕ ДОКАЗА�
 - Авторизованный MCP `initialize` / `tools/list` — protocol `2025-06-18`; server `Twenty MCP Server 0.1.0`; семь wrapper tools. Бизнес-методы загружались через `learn_tools` и вызывались через `execute_tool`.
 - Авторизованные MCP metadata / roles / workflows — 28 имён стандартных объектов; четыре контрактных объекта отсутствуют до разработки/установки приложения; 2 роли; 0 workflow. У Admin разрешены глобальные чтение/обновление/удаление/destroy и все tools; у Member также широкие глобальные права чтения/обновления/удаления/destroy и все tools, но API keys назначать нельзя. Привязка текущего ключа к роли и plan недоступны через этот toolset.
 - Текущая временная Company-проверка через MCP — create, update, read-back, soft-delete успешны; поиск по точному обновлённому имени после удаления вернул 0 видимых записей. Одна soft-deleted запись остаётся обратимой в Twenty. `TWENTY_API_KEY` прочитан из локального `.env`, значение не выводилось.
+- `docker compose run --rm bootstrap` — успешно завершился на Twenty `v2.45.6` и повторно использовал существующий локальный API key без его вывода. Проверен только повторный запуск с готовым ключом; создание нового ключа и запись в `.env` остаются непроверенными.
 - `codex --version` — `codex-cli 0.160.1`.
 - `codex app-server generate-json-schema --experimental --out /tmp/twenty-compat-gate-codex-schema` — успешно; schema временная и не добавлена в репозиторий.
 - `codex app-server --stdio` с `initialize` / `initialized` и EOF — exit 0; initialize response получен без RPC error. Это handshake probe, не тест turn lifecycle.
@@ -56,7 +57,7 @@ Gate остаётся **НЕ ПРОЙДЕН — ЧАСТИЧНЫЕ ДОКАЗА�
 - `yarn --version` — `4.13.0`.
 - SDK source checkout `a3e874920cfa319c7c8683e020b65795d6193af8` содержит `twenty-sdk@2.46.0` с `engines.twenty >=2.40.0`, Node `^24.5.0`, Yarn `^4.0.2`; диапазон включает сервер `v2.45.6`. В checkout нет `node_modules`, пакет не установлен, app build/install не выполнялись.
 - `yarn install --immutable` во временном полном Twenty checkout завершился с peer-dependency warnings; `yarn.lock` не изменён. `nx build twenty-sdk --skip-nx-cache` запустил prerequisite `twenty-shared:generateBarrels`, но `tsx`/esbuild процессы не завершились и build был прерван; target `twenty-sdk` не достигнут. Прямая попытка Vite из focused install не разрешила workspace import `twenty-shared/utils`. Созданные зависимости удалены; `git status` checkout Twenty чистый.
-- `gh auth status` — токены GitHub у всех настроенных аккаунтов недействительны; активный `anatolyshipitsyn` не авторизован для проверки repository rights/PR.
+- При разрешённом сетевом доступе `gh auth status` — активный `anatolyshipitsyn` авторизован с scope `repo`. `gh pr create` создал PR #6; `gh pr view` показывает `MERGEABLE` / `CLEAN`, а `gh pr checks` сообщает, что checks не настроены. Это подтверждает базовый доступ к репозиторию/PR, но не идемпотентность публикации оркестратора.
 
 ## Какие доказательства ещё нужны
 
@@ -82,7 +83,7 @@ Gate остаётся **НЕ ПРОЙДЕН — ЧАСТИЧНЫЕ ДОКАЗА�
 | Permissions, ingress и secrets | MCP показывает Admin/Member с широкими глобальными правами; назначение роли API key и least-privilege не проверены. Server опубликован на `127.0.0.1:3000`; unauthenticated GraphQL `__typename` возвращает 200, REST metadata — 403. Локальный ключ не выводился. | Частично / не проверено |
 | Concurrent Dispatch и PENDING recovery | Orchestrator worker и Journal app ещё не реализованы | Не проверено |
 | Codex handshake, вопросы, interrupt, history, shutdown | `initialize`/`initialized` завершились без ошибки и app-server вышел по EOF; lifecycle RPC не вызывались | Частично / не проверено |
-| GitHub permissions и идемпотентность PR | Не проверялись; `gh auth status` сообщает, что токен выбранного аккаунта `anatolyshipitsyn` недействителен | Не проверено |
+| GitHub permissions и идемпотентность PR | Активный `anatolyshipitsyn` создал PR #6; GitHub сообщает `MERGEABLE` / `CLEAN`, checks не настроены. Идемпотентность публикации оркестратора не проверялась. | Частично / не проверено |
 | Native UI и quotas | Plan/UI workspace не проверялись | Не проверено |
 | Backup и restore | Backup/restore не выполнялись | Не проверено |
 | Лимиты Search/Logic Function/schedule, pagination Journal, IF/else, enforcement permissions | На закреплённой версии сервера и plan workspace не проверялись | Не проверено |
