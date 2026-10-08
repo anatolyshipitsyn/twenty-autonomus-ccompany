@@ -36,7 +36,7 @@ Gate остаётся **НЕ ПРОЙДЕН — ЧАСТИЧНЫЕ ДОКАЗА�
 | SAI-18 — Upsert | В проверенном server source есть обработка `upsert` для REST и GraphQL. | **Только статические доказательства.** Idempotency, неизменность результата, повторная доставка и Upsert не запускались на целевом сервере. |
 | SAI-18 — workflows и concurrency | Авторизованный MCP `list_workflows` вернул 0 workflow. | **Не проверено.** IF/else, четыре workflow, сериализация, конкурентный Dispatch, права и отсутствие workflow storm требуют тестового workspace. |
 | SAI-20 — plan, квоты и SDK helpers | Plan workspace и квоты не раскрываются текущим авторизованным MCP toolset. | **Не проверено.** Поведение квот и наличие SDK helpers на сервере/plan не проверялись. |
-| Codex protocol в составе SAI-13 | `codex app-server --stdio` принял `initialize` и `initialized`, вернул initialize response без ошибки и завершился с кодом 0 после EOF; сгенерированная schema содержит `thread/start`, `thread/read`, `turn/start`, `turn/interrupt`. | **Частично.** Проверены handshake и завершение процесса после EOF. Persistent thread, turn lifecycle, вопрос/ответ, interrupt, сверка истории и shutdown при активном turn не запускались. App-server явно помечен experimental. |
+| Codex protocol в составе SAI-13 | `codex app-server --stdio` принял `initialize` и `initialized`, вернул initialize response без ошибки и завершился с кодом 0 после EOF; сгенерированная schema содержит `thread/start`, `thread/read`, `turn/start`, `turn/interrupt`. Изолированный `thread/start` вернул `ephemeral=false`, но без turn rollout file не создался, а после рестарта процесса `thread/list` вернул 0 (включая фильтр `appServer`). | **Частично.** Handshake и завершение процесса после EOF прошли. Persistence thread/history не подтверждена: probe без turn не даёт однозначного результата; authenticated model turn, вопрос/ответ, interrupt, сверка истории и shutdown при активном turn не запускались. App-server явно помечен experimental. |
 
 ## Команды и результаты
 
@@ -53,6 +53,7 @@ Gate остаётся **НЕ ПРОЙДЕН — ЧАСТИЧНЫЕ ДОКАЗА�
 - `codex --version` — `codex-cli 0.160.1`.
 - `codex app-server generate-json-schema --experimental --out /tmp/twenty-compat-gate-codex-schema` — успешно; schema временная и не добавлена в репозиторий.
 - `codex app-server --stdio` с `initialize` / `initialized` и EOF — exit 0; initialize response получен без RPC error. Это handshake probe, не тест turn lifecycle.
+- Изолированный Codex persistence probe — временный `CODEX_HOME`, пустые credentials и без AI turn: `thread/start` вернул persistent thread, но rollout file не создался; после рестарта `thread/list` вернул 0 при default, `appServer` и state-DB-only фильтрах. Без turn результат неокончательный и не доказывает сбой persistence.
 - `node --version` / bundled Node executable — системная `v22.22.3`; bundled `v24.19.0`.
 - `yarn --version` — `4.13.0`.
 - SDK source checkout `a3e874920cfa319c7c8683e020b65795d6193af8` содержит `twenty-sdk@2.46.0` с `engines.twenty >=2.40.0`, Node `^24.5.0`, Yarn `^4.0.2`; диапазон включает сервер `v2.45.6`. В checkout нет `node_modules`, пакет не установлен, app build/install не выполнялись.
