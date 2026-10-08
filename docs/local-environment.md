@@ -2,7 +2,7 @@
 
 [Русская версия](local-environment.ru.md) · [README](../README.md)
 
-The environment uses the unmodified official `twentycrm/twenty:v2.45.0` image, PostgreSQL 16, Redis 7, and Twenty's background worker. Registration through the UI uses standard Twenty onboarding and demo data. The optional bootstrap service provisions an empty workspace and skips onboarding. No image builds or patches are required.
+The environment uses the unmodified official `twentycrm/twenty:v2.45.6` image, PostgreSQL 16, Redis 7, and Twenty's background worker. Registration through the UI uses standard Twenty onboarding and demo data. The optional bootstrap service provisions an empty workspace, skips onboarding, and creates the local MCP API key in `.env`. No image builds or patches are required.
 
 The NestJS/Codex orchestrator worker and its custom objects/workflows are not implemented. All 28 [SAI criteria](requirements/acceptance.md) remain Not verified.
 
@@ -63,7 +63,7 @@ Committed credentials/encryption keys are public local defaults. `.env` and `.en
 
 ## Bootstrap an administrator and empty workspace
 
-The local-only `bootstrap` service uses the compiled NestJS services from the Twenty image. It calls native signup and `activateWorkspace`, suppresses demo prefill only in this process, and clears all onboarding flags/history before login. The [script](../scripts/bootstrap.cjs) contains no direct SQL queries and loads no SQL snapshot; Twenty services and ORM manage the database. Server and worker retain normal behavior for later UI-created workspaces.
+The local-only `bootstrap` service uses the compiled NestJS services from the Twenty image. It calls native signup and `activateWorkspace`, suppresses demo prefill only in this process, clears onboarding flags/history, and creates a Twenty API key assigned to the Admin role. The token is stored in the ignored `.env` as `TWENTY_API_KEY`; only the one-shot bootstrap container mounts that file writable, and it never prints the token. A valid `Codex Local MCP` key is retained on reruns; another valid key is replaced and revoked after the new token is saved. The [script](../scripts/bootstrap.cjs) contains no direct SQL queries and loads no SQL snapshot; Twenty services and ORM manage the database. Server and worker retain normal behavior for later UI-created workspaces.
 
 1. Set private local bootstrap values in `.env`:
    - `BOOTSTRAP_ADMIN_EMAIL`: administrator login email.
@@ -79,13 +79,17 @@ The local-only `bootstrap` service uses the compiled NestJS services from the Tw
 
 3. Open the configured `SERVER_URL` and sign in using the administrator credentials. All onboarding forms are skipped: connect account, app installation, profile, team invitation, and navigation history back to those steps.
 
+The project-scoped Codex MCP config reads `TWENTY_API_KEY` from `.env` for requests to the local MCP endpoint. A regular `docker compose up` followed by unrelated UI signup does not create a key; use this bootstrap flow, or run it to adopt one matching Admin/workspace. Bootstrap reads and writes `.env` through its bind mount; Compose does not pass `TWENTY_API_KEY` in the container environment. Keep `.env` private; the bootstrap service is local-only and is removed from production configuration.
+
 Behavior and boundaries:
 
 - A first run requires a fresh migrated database, including no soft-deleted users/workspaces. Avoid concurrent UI signup during provisioning.
-- Requires self-hosted Twenty with billing disabled. Internal service APIs and the process-local prefill override are verified against `v2.45.0`; recheck compatibility when changing the image.
+- Requires self-hosted Twenty with billing disabled. Internal service APIs and the process-local prefill override were verified against `v2.45.0`; the current image is `v2.45.6`, so recheck bootstrap compatibility before relying on those APIs.
 - Standard objects, fields, views, roles, the server administrator, and an Admin workspace member are initialized. Demo company, person, opportunity, workflow, and dashboard records are omitted; optional onboarding app installation is skipped.
+- Bootstrap reads `TWENTY_API_KEY` from the mounted `.env` file, not from a container environment variable. It reuses the token only when it is active for this workspace and its key is named `Codex Local MCP`; otherwise it creates a new key with the Admin role and 100-year expiry, saves it in `.env`, and revokes the previous key when its identity is verified.
+- `openssl rand -base64 32` is for encryption keys, not Twenty API tokens. Twenty issues its own signed API token.
 - Profile updates target only email verification and unchanged empty surnames. Password, blocking, existing names, and business records are retained. User/workspace caches are invalidated without clearing queues.
-- Credentials are passed through the container environment; keep the env file private.
+- Bootstrap credentials are passed only to the one-shot bootstrap container. That container alone mounts `.env` read/write to inspect or store `TWENTY_API_KEY`; the server and worker do not mount `.env`.
 
 ## Bootstrap execution
 
@@ -95,8 +99,9 @@ Behavior and boundaries:
 4. For a new account, require an empty database, validate the subdomain and demo-prefill hook, and prepare the user with native password validation/hashing.
 5. Persist `creating`, then call `signUpOnNewWorkspace` and `activateWorkspace`. Override only `prefillCreatedWorkspaceRecords` in this process, restoring it afterward. Standard metadata, roles, and the workspace member are initialized normally.
 6. Verify the Admin role, update email verification and unchanged empty surnames, invalidate account caches, and remove every `ONBOARDING_` user-variable key across all three scopes.
-7. Require `onboardingStatus=COMPLETED`. Check that demo objects are empty only on first creation, then persist `completed` with user/workspace IDs.
-8. Release the acquired lock, drain events, and close the NestJS context. The service has `restart: "no"` and is invoked explicitly with `docker compose run --rm bootstrap`.
+7. Require `onboardingStatus=COMPLETED`. Check that demo objects are empty only on first creation; retain a valid `Codex Local MCP` key or create a new Admin-role key.
+8. Write a newly generated token to the mounted `.env` without logging it, then revoke the previous verified key. Persist `completed` with user/workspace IDs.
+9. Release the acquired lock, drain events, and close the NestJS context. The service has `restart: "no"` and runs with `docker compose run --rm bootstrap`.
 
 ## Bootstrap reruns and recovery
 
@@ -113,9 +118,11 @@ For a blocked run, inspect `docker compose logs --tail=100 server worker` and th
 
 Use [compose.production.yaml](../compose.production.yaml) with the base file. It requires nonempty `SERVER_URL`, `PG_DATABASE_PASSWORD`, and `ENCRYPTION_KEY`; it cannot determine whether supplied values are secure. Creating a workspace through the UI uses full standard onboarding, including demo prefill. `bootstrap: !reset null` removes bootstrap from the merged production configuration, even with `--profile bootstrap` or `--profile "*"`. Bootstrap variables and scripts are not mounted into the production services. This environment has not been deployed to production.
 
+In production, create the Twenty API key manually in workspace settings and configure it on the MCP client through the deployment's secret storage. The API key is not injected into the production server/worker environment, and the local bootstrap service is removed from the production configuration.
+
 1. Prepare a private `.env.production`:
    - `COMPOSE_PROJECT_NAME`: a separate project and volumes.
-   - `TAG=v2.45.0`.
+   - `TAG=v2.45.6`.
    - `SERVER_URL`: actual public HTTPS URL.
    - `PG_DATABASE_PASSWORD`: unique strong alphanumeric password.
    - `ENCRYPTION_KEY`: private key generated with `openssl rand -base64 32`.
@@ -163,5 +170,9 @@ Recorded native-service runtime checks on 2026-10-07 used Twenty `v2.45.0` and P
 - After the review fixes, native validation rejected a multiline password without writing a marker; a corrected password proceeded to creation. This check used native password validation with substituted persistence/signup.
 - Real TypeORM checks in a disposable PostgreSQL database preserved concurrent password/surname changes, filled an unchanged empty surname, and rejected a concurrently disabled administrator without re-enabling it.
 - Full fresh creation and rerun succeeded after the fixes in `twenty-bootstrap-fix-test`. Native Workspace ORM preserved a member's first name and a surname changed between read and update.
+
+On 2026-10-08, the configured `server` and `worker` were recreated from `twentycrm/twenty:v2.45.6` (image digest `sha256:dca6d82985901468b391c0335aa8f0519a52b9809709e66f2de1dbff04351e53`). Compose configuration validation passed, `/healthz` returned `{"status":"ok"}`, and the UI returned HTTP 200. PostgreSQL and Redis containers remained running. Bootstrap behavior and orchestrator SAI criteria have not been revalidated on this image.
+
+Local MCP API key generation through bootstrap was added after those runtime checks. It has not yet been executed against the running `v2.45.6` environment.
 
 Temporary test stacks, databases, volumes, and private credentials were removed. Regression checks did not modify the working workspace. Browser routing was not retested for the native-service version. Public production deployment, backup/restore, and all 28 SAI orchestrator criteria remain Not verified.

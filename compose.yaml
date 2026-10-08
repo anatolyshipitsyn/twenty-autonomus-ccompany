@@ -2,7 +2,7 @@
 # Defaults are for local development only; use compose.production.yaml in production.
 x-settings:
   project-name: &project-name ${COMPOSE_PROJECT_NAME:-twenty-autonomus-ccompany}
-  twenty-image: &twenty-image twentycrm/twenty:${TAG:-v2.45.0}
+  twenty-image: &twenty-image twentycrm/twenty:${TAG:-v2.45.6}
   postgres-image: &postgres-image ${POSTGRES_IMAGE:-postgres:16}
   redis-image: &redis-image ${REDIS_IMAGE:-redis:7-alpine}
   http-port: &http-port ${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-3000}:3000
@@ -43,9 +43,11 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-TwentyLocalOnly123!}
       BOOTSTRAP_WORKSPACE_NAME: ${BOOTSTRAP_WORKSPACE_NAME:-Twenty Local Only}
       BOOTSTRAP_WORKSPACE_SUBDOMAIN: ${BOOTSTRAP_WORKSPACE_SUBDOMAIN:-autonomous-company}
+      BOOTSTRAP_ENV_FILE: /run/twenty-bootstrap/.env
       LOG_LEVELS: error,warn
     volumes:
       - ./scripts:/app/packages/twenty-server/bootstrap:ro
+      - ./.env:/run/twenty-bootstrap/.env:rw
       - server-local-data:/app/packages/twenty-server/.local-storage
     depends_on:
       server:

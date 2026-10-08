@@ -17,7 +17,7 @@ Status: orchestrator design documentation plus a standard Twenty Docker Compose 
 
 ## Run the local environment in Docker
 
-The environment includes standard Twenty v2.45.0, its background worker, PostgreSQL, and Redis. Docker must be running with Docker Compose available and at least 2 GB RAM allocated to the stack.
+The environment includes standard Twenty v2.45.6, its background worker, PostgreSQL, and Redis. Docker must be running with Docker Compose available and at least 2 GB RAM allocated to the stack.
 
 1. From the repository root, validate configuration and start:
 
@@ -32,7 +32,7 @@ The environment includes standard Twenty v2.45.0, its background worker, Postgre
 
 ## Bootstrap an administrator without demo data
 
-The optional one-shot `bootstrap` service creates a server administrator, assigns the workspace Admin role, and initializes standard objects/fields without demo companies, people, opportunities, workflows, or dashboard records.
+The optional one-shot `bootstrap` service creates a server administrator, assigns the workspace Admin role, initializes standard objects/fields without demo records, and provisions a `Codex Local MCP` API key in the project `.env`.
 
 1. Create a private `.env` from [.env.example](.env.example) if it does not already exist. Set these values; replace the password placeholder with a private password of 12–50 characters without line breaks:
 
@@ -50,7 +50,7 @@ The optional one-shot `bootstrap` service creates a server administrator, assign
    docker compose run --rm bootstrap
    ```
 
-3. Open [http://localhost:3000](http://localhost:3000) and sign in with the configured email/password. For a different address, use `SERVER_URL`.
+3. Open [http://localhost:3000](http://localhost:3000) and sign in with the configured email/password. For a different address, use `SERVER_URL`. The bootstrap writes the generated `TWENTY_API_KEY` directly to the project `.env` without printing it.
 
 The [bootstrap script](scripts/bootstrap.cjs) uses the compiled NestJS services in the Twenty image, creates `Admin` with the configured surname (`User` by default), and clears **all onboarding steps** before login. It suppresses demo prefill only in the bootstrap process and clears pending flags/history in user-global, workspace-global, and user/workspace scopes. The script contains no direct SQL queries and loads no SQL templates; database operations go through Twenty services and ORM.
 
@@ -60,7 +60,8 @@ The [bootstrap script](scripts/bootstrap.cjs) uses the compiled NestJS services 
 - Email, workspace name/subdomain, and persisted user/workspace IDs must match. Changing `BOOTSTRAP_ADMIN_PASSWORD` does not reset an existing password.
 - Profile updates preserve concurrent password/name changes and do not overwrite account blocking. Native password validation runs before the creation marker is written.
 - Existing locks, `creating` state, or identity mismatches stop bootstrap with an error; see [recovery instructions](docs/local-environment.md#bootstrap-reruns-and-recovery). A single matching enabled administrator and active workspace can be adopted without a new-format marker, including from the previous SQL bootstrap.
-- The service uses internal Twenty `v2.45.0` APIs; verify compatibility when upgrading the image.
+- Bootstrap reuses a valid `Codex Local MCP` key. Otherwise it creates a new key, stores it in `.env`, and revokes the previous key when it can verify that key. Compose does not pass `TWENTY_API_KEY` as a container environment variable; only the one-shot local bootstrap container mounts `.env` writable.
+- Internal Twenty APIs used by local bootstrap were previously verified on `v2.45.0`. The current image is `v2.45.6`; the new API-key path has not yet been runtime-verified on that image.
 - Keep `.env` private. Workspace creation through the UI still uses Twenty's normal demo prefill and onboarding.
 
 Bootstrap is available only in the local configuration. [compose.production.yaml](compose.production.yaml) removes it from the merged service list, including when profiles are enabled. Production uses standard account/workspace registration through the UI.
