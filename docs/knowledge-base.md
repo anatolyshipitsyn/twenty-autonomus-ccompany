@@ -9,6 +9,7 @@ The home page is inside [Twenty AI Orchestrator](https://app.notion.com/p/3f26f8
 ## Responsibilities
 
 - Git: [requirements](requirements.md) and linked RU/EN contracts are the specification; [PRD](PRD.md) provides context.
+- The flat, sequential delivery plan is [ROADMAP](ROADMAP.md); its stages do not change acceptance status without integration evidence.
 - Notion: working decisions, open questions, proposed implementation stages, pilot evidence, and reports.
 - Twenty: execution state, commands, durable AI Run Journal, approvals, and human acceptance.
 
@@ -18,7 +19,7 @@ This setup is connector access plus repository instructions. It does not install
 
 - [Decisions](https://app.notion.com/p/5e005b54e48e417c885f998b3878ddaf): context, reason, alternatives, consequences, source, requirement IDs, and confirmation. States: `Proposed`, `Accepted`, `Superseded`.
 - [Open questions](https://app.notion.com/p/247a55a7a8f848fcb69a71472bf65a71): six initial compatibility/configuration questions from [operations](requirements/operations.md). States: `Open`, `Resolved`.
-- [Implementation plan](https://app.notion.com/p/a56e14044d054520be9ab93cdf55a57c): six proposed stages with dependencies and related SAI IDs. States: `Proposed`, `In progress`, `Completed`. No dates or owners have been assigned; the mapping is planning guidance, not a replacement acceptance matrix.
+- [Implementation plan](https://app.notion.com/p/a56e14044d054520be9ab93cdf55a57c): seven stages aligned with [ROADMAP](ROADMAP.md), with dependencies, statuses, and related SAI IDs. States: `Proposed`, `In progress`, `Completed`. No dates or owners have been assigned; the mapping is planning guidance, not a replacement acceptance matrix.
 - [Pilot checks](https://app.notion.com/p/e4e6ec2571c54b87b6f3366dbca55839): all 28 SAI IDs, checks, expected results, source links, and evidence. Initial state: `Not verified`. Other states: `Partially met`, `Met`, `Not met`.
 - [Reports](https://app.notion.com/p/fe921adac381418dbf00a35f2be35ab0): work date, kind, changes, commit/PR, actual checks, limitations, and next steps. Kinds: `Setup`, `Engineering`, `Verification`.
 
