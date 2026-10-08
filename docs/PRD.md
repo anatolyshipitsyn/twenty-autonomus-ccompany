@@ -2,7 +2,7 @@
 
 Language: English · Version: 1.1 · Date: 6 October 2026 · Status: implementation draft.
 
-[Русская версия](PRD.ru.md) · [Verifiable requirements](requirements.md)
+[Русская версия](PRD.ru.md) · [Verifiable requirements](requirements.md) · [Project roadmap](ROADMAP.md)
 
 The source specification provenance and SHA-256 are recorded in the [requirements register](requirements.md). PRD describes the product; verifiable contracts are in topic documents. Implementation and runtime validation have not been performed.
 
@@ -236,13 +236,6 @@ Mitigations and verifiable conditions are defined in the [requirements](requirem
 
 ## 10. Delivery and acceptance
 
-| Stage | Outcome |
-| --- | --- |
-| 1. Compatibility gate | Versions, schema/permissions, workflows, guard, SSH/API, Codex protocol, recovery, and GitHub verified on a test repository |
-| 2. Twenty App and host | Three objects, Project, indexes, roles, router, UI, four workflows, and SSH supervisor |
-| 3. Vertical flow | START → execution → checks → PUBLISH_PR → RESULT → human acceptance |
-| 4. Reliability and operator | Questions, handoff, progress, cancellation, budget, recovery; SAI-01–SAI-21 and SAI-24–SAI-28 |
-| 5. Analytics | Version/trace/score export, no blocking during Langfuse failure; SAI-22–SAI-23 |
-| 6. Pilot decision | All 28 criteria backed by sanitized integration evidence; remaining limitations explicitly recorded |
+The flat sequential stages, dependencies, current evidence, and exit conditions are in the [project roadmap](ROADMAP.md). All 28 SAI criteria remain **Not verified** until integration evidence is recorded in the [acceptance contract](requirements/acceptance.md). A working local pilot does not prove Codex app-server production readiness, release, or deploy.
 
-A working local pilot does not prove Codex app-server production readiness, release, or deploy. This PRD and [requirements.md](requirements.md) form the design package; RU/EN use the same requirement and acceptance identifiers.
+This PRD and [requirements.md](requirements.md) form the design package; RU/EN use the same requirement and acceptance identifiers.
