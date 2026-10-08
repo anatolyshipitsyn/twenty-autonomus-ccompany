@@ -152,6 +152,20 @@ Implementation boundaries:
 - lifecycle in Twenty
 - execution in the worker
 
+Planned repository layout:
+
+```bash
+twenty-autonomus-ccompany/
+  docs/                 # PRD and contracts
+  compose.yaml          # local Twenty
+  apps/
+    twenty-app/         # standalone Twenty App package
+  services/
+    worker/             # NestJS worker, if its implementation stays here
+```
+
+The Twenty App is a standalone package in `apps/twenty-app/`. `services/worker/` is the planned location if the worker implementation is also kept in this repository; the layout records a plan, not evidence that either component has been implemented.
+
 An unknown outcome blocks the queue. Langfuse does not block execution. Exact guarantees are REQ-23–REQ-32 in the [register](requirements.md), [protocol](requirements/protocol.md), and [recovery](requirements/operations.md).
 
 ## 8. Operator interface
