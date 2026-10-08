@@ -15,7 +15,7 @@ This is the flat, sequential delivery plan. Requirements and linked contracts re
    - **Exit criteria:** issue `GO` only when the minimum compatibility prerequisites for App development have evidence and no known blocker remains. Classify every unresolved issue as blocking or non-blocking; a non-blocking issue needs a reason and a concrete verification step in its dependent stage. A `HOLD` or an unresolved blocker keeps this stage **In progress** and blocks Stage 2. The gate does not require proving app schema, workflows, quotas, backup/restore, or full Codex turn lifecycle before those components exist.
    - **Dependencies:** none.
    - **Verification/evidence:** sanitized environment/version inventory and actual API/protocol/GitHub probe results; distinguish static/source inspection from runtime evidence.
-   - **Status:** **In progress** — the 8 October assessment is partial and **NOT PASSED**. Health, MCP access, standard Company CRUD, and initialize handshake do not close the gate.
+   - **Status:** **Completed — GO** — official Twenty App scaffold install and `yarn twenty dev` synchronization passed in an isolated app-dev server; selected server health/API, Codex initialize handshake, and GitHub push access were confirmed. Exact sync against selected server `v2.45.6` is a Stage 2 entry check; see [compatibility assessment](evidence/compatibility-gate.md).
    - **SAI mapping:** SAI-13, SAI-18, SAI-20 are related pilot criteria; no SAI is closed by this gate.
 
 2. **Twenty App data model and installation**
@@ -25,7 +25,7 @@ This is the flat, sequential delivery plan. Requirements and linked contracts re
    - **Exit criteria:** schema, relations, unique indexes, duplicate rejection, Upsert/redelivery behavior, and permissions are verified against the selected server; test data and workspace are isolated from production.
    - **Dependencies:** Stage 1 explicit `GO`; a `HOLD` blocks this stage.
    - **Verification/evidence:** actual App build/install output, schema/API readback, duplicate and redelivery probes, and permission checks.
-   - **Status:** **Proposed**.
+   - **Status:** **Proposed** — unblocked by Stage 1 GO; not started.
    - **SAI mapping:** SAI-13, SAI-15, SAI-18, SAI-24.
 
 3. **Workflows and native operator experience**
@@ -80,7 +80,7 @@ This is the flat, sequential delivery plan. Requirements and linked contracts re
 
 ## Planning rules
 
-- Stage order expresses dependencies, not a claim of current implementation progress. Only Stage 1 has partial evidence; it is not passed. Stages 2–7 have no completion evidence in the current repository snapshot.
+- Stage order expresses dependencies, not a claim of current implementation progress. Stage 1 is complete with GO; Stage 2 is unblocked but not started. Stages 2–7 have no completion evidence in the current repository snapshot.
 - Dates, estimates, and owners are not assigned. Assign them only when the team has agreed them.
 - The OPS compatibility gate is a prerequisite and is distinct from the 28 pilot acceptance criteria. The Notion planning records previously conflated these scopes; keep all SAI statuses **Not verified** until integration evidence exists.
 - Update `requirements/acceptance.md` and its Russian counterpart only from integration evidence. Preserve all 28 IDs and current statuses until then.
