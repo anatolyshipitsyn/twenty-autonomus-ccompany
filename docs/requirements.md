@@ -1,6 +1,6 @@
 # Requirements: AI orchestrator
 
-Language: English · Version: 1.2 · Date: 6 October 2026 · Status: implementation draft.
+Language: English · Version: 1.3 · Date: 10 October 2026 · Status: implementation draft.
 
 [Русская версия](requirements.ru.md) · [PRD](PRD.md)
 
@@ -10,9 +10,9 @@ Source: [simplified-ai-orchestrator.md](../../autonomous-company/docs/specs/simp
 
 This document converts the source specification into a verifiable contract. “Must” means a mandatory pilot condition. Proposed numerical defaults are listed separately and approved in deployment configuration. Identifiers `REQ-*`, `DATA-*`, `STATE-*`, `PROTO-*`, `OPS-*`, and `SAI-*` are identical in RU/EN. Every table rule is mandatory except explicitly identified defaults and open decisions.
 
-All requirements and SAI criteria are **Not verified**: the current repository contains documentation, rather than an implemented worker, app, or validated runtime. Twenty v2.45.0, `@openai/codex` 0.158.0, and `codex exec` cited in the source belong to the previous checkout and do not establish this project's configuration. Third-party API capabilities must be validated on selected versions rather than inferred from the specification.
+All pilot SAI criteria remain **Not verified**. The repository now includes the private Twenty App data model and Stage 2 runtime evidence, but not the worker or end-to-end pilot behavior required to verify the full acceptance criteria. Twenty v2.45.0, `@openai/codex` 0.158.0, and `codex exec` cited in the source belong to the previous checkout and do not establish this project's configuration. Third-party API capabilities must be validated on selected versions rather than inferred from the specification.
 
-Review clarifications in version 1.2 take precedence over the source wording for publication retry and technical retention. They are defined under DATA-02, PROTO-05, OPS-07 and the P2 regression scenarios; the original 28 SAI criteria remain intact.
+Review clarifications in version 1.2 take precedence over the source wording for publication retry and technical retention. Version 1.3 records the accepted Twenty permission limitation under DATA-02/DATA-03 and REQ-31; the original 28 SAI criteria remain intact.
 
 ## Navigation for Codex
 
@@ -79,7 +79,7 @@ Contracts define fields, transitions, and protocol; PRD describes the product; S
 | REQ-28 | During SSH/Twenty/Journal outage, send no new Codex commands. An already authorized turn may finish within budget; the memory buffer is transient. On reconnect, reconcile Codex history/artifacts and synchronize facts; insufficient data produces WAITING/RECOVERY. | 9 | SAI-07, SAI-08, SAI-10 |
 | REQ-29 | For 429/5xx use backoff with jitter and Retry-After; synchronization retry creates no AI turn. Codex disconnect or uncertain turn/start requires RECONCILE/RECOVERY_REPORT; confirmed process death produces FAILED/WAITING/ERROR. Heartbeat timeout alone does not release a run. | 9 | SAI-04, SAI-08, SAI-20 |
 | REQ-30 | Persist accumulated activeTimeMs/checkpoints. Exclude confirmed human waiting, retain the budget across handoff/restart; classify unresolvable intervals conservatively as active. Watchdog works without Twenty, confirms shutdown at the limit, and reports TIME_LIMIT. Supervisor stops the dedicated Codex process when the worker dies. | 10 | SAI-06, SAI-09 |
-| REQ-31 | Only workflows change status/requestVersion/activeRun. The worker can read commands and write its own events/intents/acknowledgements/technical fields. If field permissions are insufficient, use protected ingress Logic Function validating workerId/runKey/operationKey; direct PostgreSQL access is prohibited. | 3, 11, 19 | SAI-12, SAI-15 |
+| REQ-31 | Only workflows change status/requestVersion/activeRun. The worker can read commands and write its own events/intents/acknowledgements/technical fields, scoped to its assigned pending records. Twenty does not separate create-time field writes from later updates; accept this native permission limitation without a custom ingress. Delivery handling must read/compare an existing operationKey and preserve payload and terminal outcomes as required by REQ-24. Direct PostgreSQL access is prohibited. | 3, 11, 19 | SAI-12, SAI-15 |
 | REQ-32 | Restrict repository allowlist, host shell/files/network policy, and GitHub credentials. Twenty API key, SSH private key, and Langfuse key are inaccessible to Codex tools. Runtime secrets and server-side secret variables are excluded from snapshot/logs/export; Codex transport token differs from model credentials. | 8, 10, 20 | SAI-12, SAI-23 |
 
 ### 2.5. UI, operations, and analytics

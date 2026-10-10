@@ -25,7 +25,7 @@ This is the flat, sequential delivery plan. Requirements and linked contracts re
    - **Exit criteria:** schema, relations, unique indexes, duplicate rejection, Upsert/redelivery behavior, and permissions are verified against the selected server; test data and workspace are isolated from production.
    - **Dependencies:** Stage 1 explicit `GO`; a `HOLD` blocks this stage.
    - **Verification/evidence:** actual App build/install output, schema/API readback, duplicate and redelivery probes, and permission checks.
-   - **Status:** **Proposed** — unblocked by Stage 1 GO; not started.
+   - **Status:** **Completed.** The official scaffold and `yarn twenty dev --once` synchronized the private App to the isolated `v2.45.6` target. Runtime evidence covers schema/relations readback, unique-index duplicate rejection, key-only/sparse Upsert behavior, and Operator/Workflows/Worker API boundaries. Worker technical Journal create and updates are verified; Twenty permits payload edits on in-scope PENDING rows, as documented in the accepted native permission limitation. Consumer-side exact-redelivery comparison and no-reexecution remain implementation/verification work for the later Worker stage. See [Stage 2 evidence](evidence/stage-2-data-model.md).
    - **SAI mapping:** SAI-13, SAI-15, SAI-18, SAI-24.
 
 3. **Workflows and native operator experience**
@@ -80,7 +80,7 @@ This is the flat, sequential delivery plan. Requirements and linked contracts re
 
 ## Planning rules
 
-- Stage order expresses dependencies, not a claim of current implementation progress. Stage 1 is complete with GO; Stage 2 is unblocked but not started. Stages 2–7 have no completion evidence in the current repository snapshot.
+- Stage order expresses dependencies, not a claim of current implementation progress. Stage 1 is complete with GO; Stage 2 exit criteria are met with isolated installation and model/permission probes. Stages 3–7 remain incomplete.
 - Dates, estimates, and owners are not assigned. Assign them only when the team has agreed them.
 - The OPS compatibility gate is a prerequisite and is distinct from the 28 pilot acceptance criteria. The Notion planning records previously conflated these scopes; keep all SAI statuses **Not verified** until integration evidence exists.
 - Update `requirements/acceptance.md` and its Russian counterpart only from integration evidence. Preserve all 28 IDs and current statuses until then.

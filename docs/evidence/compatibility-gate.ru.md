@@ -1,18 +1,31 @@
 # Compatibility gate — текущие результаты
 
-Дата: 8 октября 2026 · Область: предпроектные проверки из OPS compatibility gate; строка этапа 1 связывает SAI-13, SAI-18, SAI-20 · Статус: **GO — разработку App можно начинать**
+Дата: 10 октября 2026 · Область: предпроектные проверки из OPS compatibility gate; строка этапа 1 связывает SAI-13, SAI-18, SAI-20 · Статус: **Этап 1 GO; этап 2 Completed**
 
-[English version](compatibility-gate.md) · [Контракт эксплуатации](../requirements/operations.ru.md) · [Контракт протокола](../requirements/protocol.ru.md) · [Матрица приёмки](../requirements/acceptance.ru.md)
+[English version](compatibility-gate.md) · [Evidence модели этапа 2](stage-2-data-model.ru.md) · [Контракт эксплуатации](../requirements/operations.ru.md) · [Контракт протокола](../requirements/protocol.ru.md) · [Матрица приёмки](../requirements/acceptance.ru.md)
+
+> Текущие evidence установки этапа 2, схемы, связей, уникальных индексов, Upsert и permissions записаны в [отчёте модели этапа 2](stage-2-data-model.ru.md). Более ранние срезы ниже описывают состояние на указанную дату и для текущего статуса этапа 2 заменены этим отчётом.
 
 ## Вердикт
 
-Настроенный self-hosted сервер Twenty работает. Авторизованный доступ к Twenty MCP работает с локально сохранённым `TWENTY_API_KEY`: workspace возвращает 28 имён стандартных объектов, одного участника, две роли и ноль workflow. Объекты `AiTask`, `AiRun`, `AiRunJournal` и `Project` отсутствуют, потому что приложение Twenty, которое их определяет, ещё не разработано и не установлено. На текущем этапе это ожидаемо и не указывает на несовместимость сервера. Ограниченная проверка Company create/update/read-back/soft-delete прошла; последующий поиск не нашёл временных записей.
+Выбранный self-hosted сервер Twenty работает. Авторизованные MCP и Company-проверки этапа 1 прошли в основном workspace. Приватное приложение этапа 2 установлено в отдельный disposable workspace `v2.45.6`; текущие выводы по схеме и API приведены в отчёте этапа 2. Основной Compose workspace не использовался для установки или probes этапа 2.
 
-Обновлённое решение gate — **GO**: официальный scaffold, установка зависимостей и цикл синхронизации App успешно завершились во временном изолированном проекте; выбранный сервер Twenty `v2.45.6`, API, Codex handshake и GitHub доступны. Схема/workflow App, least-privilege credential, квоты и полный Codex lifecycle остаются для соответствующих этапов. App не устанавливался в workspace проекта. Предыдущие проверки Company и bootstrap остаются приведены ниже; секрет не выводился и не сохранялся в отчёте.
+Решение этапа 1 остаётся **GO**: официальный scaffold, установка зависимостей и синхронизация App прошли в изолированном проекте на `v2.45.8`. Для этапа 2 официальный scaffold синхронизирован с disposable изолированным app-dev target `v2.45.6`, проверки критериев выхода завершены. Текущие evidence этапа 2 приведены выше.
 
 ## Решение gate и ограниченный кандидат
 
-**Решение: GO для разработки App; этап 2 разблокирован и остаётся Proposed.** Официальный scaffolder разрешился из `create-twenty-app@latest` в `2.45.0`, установил `twenty-sdk@2.45.0` с Node `24.19.0` / Yarn `4.13.0` и завершил `yarn twenty dev` на изолированном app-dev server `v2.45.8`. В SDK metadata указан Twenty `>=2.40.0`, включая выбранный сервер `v2.45.6`. Health/API цели, Codex initialize handshake и GitHub repository access также прошли. Точная синхронизация SDK на `v2.45.6` остаётся входной проверкой этапа 2; заявленный диапазон и успешная синхронизация на `v2.45.8` делают её неблокирующей для начала разработки App. Gate не закрывает SAI.
+**Решение: GO для начала разработки App.** Официальный scaffolder разрешился из `create-twenty-app@latest` в `2.45.0`, установил `twenty-sdk@2.45.0` с Node `24.19.0` / Yarn `4.13.0` и завершил `yarn twenty dev` на изолированном app-dev server `v2.45.8`. Точная синхронизация с target `v2.45.6` также прошла при входе в этап 2, как записано ниже. Gate не закрывает SAI.
+
+## Входная проверка этапа 2 (9 октября 2026)
+
+**Результат: PASS; этап 2 — In progress.** Запущен disposable изолированный контейнер `twentycrm/twenty-app-dev:v2.45.6` на `127.0.0.1:2020`; `/healthz` вернул HTTP 200. Официальный scaffolder `create-twenty-app@2.45.0` создал `apps/twenty-app/` с Node `24.19.0` и Yarn `4.13.0`; lockfile фиксирует generated SDK packages на `2.45.0`. Официальная команда `yarn twenty dev` завершила начальную синхронизацию с этим точным target: Resources Build, Resources Upload, Manifest Build, Application Synchronization, API Client Generation и Entities (8 synced) прошли; итоговый статус — Synced. Watch process остановлен после успешной синхронизации; shell вернул 130 из-за преднамеренной остановки. Основной Compose workspace не использовался.
+
+| Наблюдение | Классификация | Evidence / следующий шаг |
+| --- | --- | --- |
+| Full-payload Journal Upsert перезаписывает immutable fields; key-only Upsert их сохраняет. | **Key-only storage path проверен; consumer behavior зависит от следующих этапов** | На изолированном target key-only Upsert вернул прежние payload/resultCode/state/task; full-payload Upsert изменил payload/resultCode. Delivery consumer должен сравнить сохранённые значения с входным payload и исключить повторное исполнение; это зависит от этапа 3/4. См. отчёт этапа 2. |
+| Runtime permissions для credentials с назначенными ролями не проверены. | **Блокирует выход этапа 2** | Проверить credentials operator, Workflows и worker в изолированном workspace. Worker сейчас имеет object-level update к Journal; ограничения полей/записей не доказаны. |
+
+Точная входная sync и установка приватного приложения прошли. Readback связей, отклонение уникальных дублей и сохранение данных через key-only Upsert прошли. Runtime-границы ролей с credentials, назначенными ролям, не проверены и пока не позволяют завершить этап 2. Full-payload Upsert небезопасен; consumer-side compare/запрет повторного исполнения зависит от этапов 3/4. Все 28 SAI ID и статусы сохранены; этим evidence статус SAI не меняется.
 
 Зафиксировать следующие значения как рабочий кандидат, а не как подтверждённую совместимость или утверждённую production-конфигурацию:
 
@@ -21,24 +34,24 @@
 - Codex: `codex-cli 0.160.1`, app-server через stdio, SHA-256 сгенерированной experimental schema `e77b7d1436a78f431a74b2cb263a862e92ae40d70411bc63835b47ab2168827c`. Это только кандидат протокола; app-server помечен experimental.
 - Топология: один host, один worker, один изолированный непроизводственный Twenty workspace, `concurrency=1`; worker и app-server размещать на одном host. Наблюдавшийся локальный Compose endpoint — `127.0.0.1:3000`. Удалённая/production-топология не выбрана.
 - Политика репозитория: кандидат — `anatolyshipitsyn/twenty-autonomus-ccompany`, базовая ветка `main`, отдельные task branches и проверяемые PR для поставки. App приватный, устанавливается только в изолированный непроизводственный workspace. `gh` авторизован как `anatolyshipitsyn`; `gh api` подтвердил право `push`.
-- Credentials: передавать отдельный непроизводственный Twenty API key и GitHub credential из host-managed secret storage во время запуска; не коммитить credentials и не копировать их в Journal/analytics. Использовать least privilege. Роль и набор прав существующего локального MCP key неизвестны, поэтому этот ключ не одобрен как credential runtime App.
+- Credentials: передавать отдельный непроизводственный Twenty API key и GitHub credential из host-managed secret storage во время запуска; не коммитить credentials и не копировать их в Journal/analytics. Использовать least privilege. Ключ основного workspace `Codex Local MCP` имеет роль `Admin` и не подтверждён для изолированного target; это не выделенный app-dev credential.
 - Развёртывание: production target не настроен. Production rollout, HA и удалённый worker не входят в этот кандидат. Для production потребуется отдельная конфигурация и проверка.
 
 ## Открытые вопросы и классификация
 
 | Вопрос | Класс | Причина / проверка на зависимом этапе |
 | --- | --- | --- |
-| Точная официальная SDK-синхронизация с выбранным сервером `v2.45.6` пока не запускалась; успешная синхронизация была на app-dev server `v2.45.8`. | **Не блокирует начало разработки App** | SDK `2.45.0` заявляет Twenty `>=2.40.0`, scaffold build/upload/sync прошли на `v2.45.8`; на входе этапа 2 повторить `yarn twenty dev` на `v2.45.6`, до разработки/установки контрактной схемы. |
+| Контрактная схема и API поведение ещё не проверены на `v2.45.6`. | **Блокирует выход этапа 2** | Входная sync прошла; установить модель и проверить schema, indexes, дубликаты, Upsert/redelivery и permissions на target. |
 | MCP toolset не показывает привязку API key к роли/least-privilege и plan/квоты workspace. | **Не блокирует разработку App** | Разрабатывать в изолированной app-dev среде; до установки/использования App в целевом workspace проверить отдельный least-privilege key и запрет неразрешённых операций на этапе 2, прочитать plan/квоты до включения workflows/recovery на этапах 3/5. |
 
 | Codex app-server помечен experimental; подтверждены только initialize/EOF, persistent thread/turn не установлены. | **Не блокирует разработку App** | Схему App можно разрабатывать независимо. Перед интеграцией worker на этапе 4 закрепить протокол/schema и проверить persistent thread, turn, вопрос/ответ, interrupt, сверку истории и shutdown без повтора исполнения. Если experimental-статус неприемлем для пилота, оформить смену протокола до этапа 4. |
-| Неизвестны привязка API key к роли и least-privilege; изученные роли имеют широкие права. | **Не блокирует разработку App** | Не переиспользовать текущий MCP key для worker. До установки/использования App на этапе 2 проверить отдельный least-privilege key и отклонение неразрешённых операций в изолированном workspace. |
+| Enforcement role boundaries в app-dev не проверен. | **Блокирует выход этапа 2** | Использовать credentials, назначенные ролям приложения, и проверить отклонение неразрешённых действий; не выводить runtime-поведение из role manifest. |
 | Неизвестны plan/квоты workspace и наличие серверных SDK helpers. | **Не блокирует разработку App** | До включения workflows и recovery прочитать выбранный plan и проверить квоты/helpers на этапах 3/5; не выводить поведение plan из статических метаданных SDK. |
-| Контрактная схема, индексы, отклонение дублей, Upsert и четыре workflow не имеют runtime evidence, поскольку App ещё нет. | **Не блокирует этот gate** | Проверить schema/indexes/Upsert при выходе из этапа 2, workflow branches/concurrency — при выходе из этапа 3, в изолированном workspace. |
+| Native Upsert перезаписывает неизменяемые поля Journal. | **Блокирует выход этапа 2** | Устранить поведение redelivery, нарушающее DATA-02, и повторить runtime probe на выбранном target. Workflow branches/concurrency остаются проверками этапа 3. |
 | Backup/restore и полный Codex lifecycle не проверены; production deployment не настроен. | **Не блокирует разработку App** | Проверить restore на этапе 5 и полный lifecycle пилота на этапе 7. Production остаётся вне кандидата, пока не будет отдельно настроен и проверен. |
 | Langfuse не выбран. | **Не блокирует разработку App** | Выбрать или отложить analytics и проверить export/recovery на этапе 6; по OPS-17 сбой analytics остаётся асинхронным. |
 
-Известных блокеров для начала разработки App нет. Этап 1 — **Completed — GO**; этап 2 — **Proposed, разблокирован**, ещё не начат. Точная синхронизация с целевым сервером, схема/workflow App, квоты, backup и full turn выполняются на зависимых этапах. SAI-13, SAI-18 и SAI-20 остаются **Not verified**.
+Этап 1 — **Completed — GO** и разрешил начать разработку App. Этап 2 — **In progress**: установка, readback схемы/связей и отклонение уникальных дублей прошли; неизменность Upsert и runtime permissions блокируют выход. Проверки Workflows относятся к этапу 3; интеграция границ записи worker — к этапу 4. Все 28 SAI остаются **Not verified**.
 
 ## Повторная проверка текущей сессии (8 октября 2026)
 
@@ -69,11 +82,11 @@
 | Требование | Проверка и фактический результат | Оценка |
 | --- | --- | --- |
 | SAI-13 — целевой сервер/API | Текущий `docker compose ps` показывает `v2.45.6`: server, PostgreSQL и Redis healthy, worker запущен. `GET /healthz` вернул HTTP 200 и `{"status":"ok",...}`. Ранее неавторизованный GraphQL `POST /graphql` с `{__typename}` вернул HTTP 200 и `Query`. | **Частично.** Подтверждены текущее состояние health и доступность endpoint, а также прежняя базовая проверка GraphQL. |
-| SAI-13 — схема workspace и права | Авторизованный MCP вернул 28 имён стандартных объектов; целевые запросы metadata для `AiTask`, `AiRun`, `AiRunJournal` и `Project` не нашли совпадений. Эти объекты создаёт приложение, которое ещё не разработано и не установлено, поэтому их отсутствие ожидаемо. Найден один участник. `list_roles` вернул Admin и Member; обе роли имеют глобальные права чтения/обновления/удаления и доступ ко всем tools, правил для объектов нет. Назначенная API key роль и plan не раскрываются. | **Частично.** Проверены MCP-доступ и стандартная metadata workspace; схему приложения, least-privilege, привязку ключа и plan нужно проверить после реализации и установки. |
+| SAI-13 — схема workspace и права | Авторизованный app-dev metadata/API schema readback вернул установленные `Project`, `AiTask`, `AiRun` и `AiRunJournal` с ожидаемыми полями/связями. Role definitions ограничивают operator чтением Journal, Workflows доступом к task/run/journal, worker — Journal. Runtime-проверки с credentials, назначенными ролям, не выполнялись; effective role probe credential не установлена. | **Частично.** Схема установлена и прочитана обратно; enforcement least-privilege не проверен. SAI остаётся `Not verified`. |
 | SAI-13 — совместимость SDK/server | Generated SDK `2.45.0` declares `>=2.40.0`; selected server `v2.45.6` is in range; official scaffold sync passed on `v2.45.8`. | **Partial.** Exact sync against `v2.45.6` is a Stage 2 entry check; this gate does not close SAI. |
-| SAI-13 / SAI-18 — unique keys | SDK source принимает `isUnique` для scalar fields и отклоняет для relation/files; source unit test проверяет unique text field. | **Только статические доказательства.** App не устанавливался, отклонение дублирующего ключа в базе не проверялось. Изучен отдельный checkout `twenty` со snapshot выше, не исходники работающего tag `v2.45.6`. |
-| SAI-18 — записи | Авторизованная проверка Company прошла: create, update, read-back, soft-delete и поиск после удаления (0 видимых временных записей). | **Частично.** Подтверждён только общий Company CRUD; записи контрактных объектов, unique indexes, отклонение дублей, relations и Upsert/redelivery не проверялись. |
-| SAI-18 — Upsert | В проверенном server source есть обработка `upsert` для REST и GraphQL. | **Только статические доказательства.** Idempotency, неизменность результата, повторная доставка и Upsert не запускались на целевом сервере. |
+| SAI-13 / SAI-18 — unique keys | Установленный target отклонил duplicate creates для `AiRun.runKey` и `AiRunJournal.operationKey` из-за unique constraint. Временные записи удалены. | **Runtime partial.** Отклонение дублей прошло; SAI остаётся `Not verified`, потому что другие части acceptance не выполнены. |
+| SAI-18 — записи и relations | GraphQL create/readback подтвердил связи Project→AiTask, AiTask→AiRun и task/run→Journal; все временные записи удалены. | **Runtime partial.** Запись/readback связей прошли; workflow acceptance не проверена. |
+| SAI-18 — Upsert | Target GraphQL `createAiRunJournal(..., upsert:true)` принял повторный operationKey, но изменил `payload` с `immutable-v1` на `immutable-v2` и `resultCode` с `OK` на `ERROR`. | **Runtime failure относительно DATA-02.** Native Upsert не сохраняет payload/terminal outcome; этап 2 заблокирован. Статус SAI не изменён. |
 | SAI-18 — workflows и concurrency | Авторизованный MCP `list_workflows` вернул 0 workflow. | **Не проверено.** IF/else, четыре workflow, сериализация, конкурентный Dispatch, права и отсутствие workflow storm требуют тестового workspace. |
 | SAI-20 — plan, квоты и SDK helpers | Plan workspace и квоты не раскрываются текущим авторизованным MCP toolset. | **Не проверено.** Поведение квот и наличие SDK helpers на сервере/plan не проверялись. |
 | Codex protocol в составе SAI-13 | `codex app-server --stdio` принял `initialize` и `initialized`, вернул initialize response без ошибки и завершился с кодом 0 после EOF; сгенерированная schema содержит `thread/start`, `thread/read`, `turn/start`, `turn/interrupt`. Изолированный `thread/start` вернул `ephemeral=false`, но без turn rollout file не создался, а после рестарта процесса `thread/list` вернул 0 (включая фильтр `appServer`). | **Частично.** Handshake и завершение процесса после EOF прошли. Persistence thread/history не подтверждена: probe без turn не даёт однозначного результата; authenticated model turn, вопрос/ответ, interrupt, сверка истории и shutdown при активном turn не запускались. App-server явно помечен experimental. |
@@ -102,16 +115,18 @@
 
 ## Какие доказательства ещё нужны
 
-- Разработать Twenty app, которая определит `AiTask`, `AiRun`, `AiRunJournal`, `Project` и нужные workflow; закрепить версию Twenty SDK и выполнить build/install compatibility check на `v2.45.6`.
-- Установить приложение в непроизводственный workspace и проверить его схему, relations, scalar unique indexes, отклонение дублей, Upsert/redelivery и permissions. Текущий MCP credential позволяет менять стандартные Company-записи; назначенную ему роль и least-privilege нужно подтвердить отдельно.
+- Устранить обнаруженную перезапись при native Upsert и подтвердить неизменность redelivery по DATA-02 на изолированном `v2.45.6`.
+- Проверить role boundaries с credentials, назначенными operator, Workflows и worker; подтвердить, что worker не может менять бизнес-lifecycle и несвязанные записи/поля Journal. Схема, связи и отклонение дублей уже проверены; результаты и ограничения native Upsert описаны в [evidence этапа 2](stage-2-data-model.ru.md).
 - Проверить четыре workflow, конкурентный Dispatch, IF/else, расписание и отсутствие heartbeat storm.
 - Прочитать plan выбранного workspace и проверить соответствующие квоты/rate limits.
 - Закрепить Codex CLI/app-server protocol и проверить persistent thread, turn lifecycle, вопросы, interrupt, сверку истории и shutdown процесса без повторного исполнения.
 - На этапе 6 выбрать Langfuse deployment и SDK/API version либо записать, что analytics отложены.
 
-Этап 1 пройден с решением **GO**; этап 2 разблокирован и остаётся **Proposed**. SAI-13, SAI-18 и SAI-20 остаются **Not verified**: gate подтверждает возможность начать разработку, а не интеграционную приёмку.
+Исторический срез на 8 октября: этап 1 был завершён с **GO**, а этап 2 имел статус **Proposed**. Точная входная проверка и текущие результаты этапа 2 описаны в [актуальном отчёте](stage-2-data-model.ru.md); SAI-13, SAI-18 и SAI-20 остаются **Not verified**.
 
 ## Покрытие полного OPS gate
+
+Таблица ниже — исторический срез предпроектного gate; текущие installation/runtime probes см. в [актуальном evidence этапа 2](stage-2-data-model.ru.md).
 
 Контракт эксплуатации задаёт более широкий предпроектный gate, чем три SAI, связанные со строкой этапа 1 в плане. Этот отчёт не считает gate завершённым только на основании этой строки.
 
@@ -131,3 +146,13 @@
 | Долгий Codex execution на host; топология worker-to-Twenty | Orchestrator worker не реализован; deployment topology не настроена | Не проверено |
 
 Ранее в записи плана Notion было написано «полный gate — все 28 SAI». Владелец уточнил область в запросе от 8 октября: OPS задаёт gate до разработки, а все 28 SAI остаются критериями интеграционной приёмки пилота. Связанный открытый вопрос Notion теперь закрыт с этим решением; статусы SAI здесь не меняются.
+
+## Повторная входная проверка этапа 2 (9 октября 2026)
+
+Эта историческая запись заменена текущим [evidence модели этапа 2](stage-2-data-model.ru.md).
+
+- Запущен изолированный disposable `twentycrm/twenty-app-dev:v2.45.6` как `twenty-stage2-appdev-v2456`, опубликован только на `127.0.0.1:2020`. `GET /healthz` вернул HTTP 200. Основной Compose workspace не использовался.
+- Официальный scaffolder `create-twenty-app@2.45.0` создал `apps/twenty-app/` с Node `24.19.0` и Yarn `4.13.0`. В `package.json` закреплены `twenty-sdk`, `twenty-client-sdk` и `twenty-ui` `2.45.0`; `yarn.lock` фиксирует эти версии. CLI binary `twenty` предоставляется закреплённым `twenty-sdk@2.45.0`.
+- Историческая техническая заметка: первая попытка scaffold через `host.docker.internal` выбрала OAuth; успешная точная синхронизация `yarn twenty dev` с `v2.45.6` описана выше. Credential позднее перевыпущен и хранится в host-managed Keychain; прежнее значение здесь не приводится.
+- Read-only проверка Settings → MCP & APIs основного workspace показала для credential из `.env`: имя `Codex Local MCP`, Role `Admin`, Expiration `Never`. Автоматическая проверка доступа отклонила read-only probe, который должен был передать этот primary Admin key отдельному disposable app-dev container: scope ключа в другом workspace не подтверждён. Передачи и probe не было; обход блокировки не предпринимался.
+- Этап 2 остаётся **In progress**. Credential перевыпущен и сохранён в host-managed Keychain; секрет не включён в репозиторий или knowledge base. Текущие результаты установки и проверок, включая несоответствие Upsert DATA-02, записаны в [отчёте этапа 2](stage-2-data-model.ru.md). Все 28 SAI ID и статусы сохранены.

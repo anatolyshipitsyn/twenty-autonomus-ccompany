@@ -1,6 +1,6 @@
 # Working in this repository
 
-This repository specifies an AI orchestrator: Twenty Workflows own business state; a NestJS worker executes commands through Codex app-server. Check the current tree before choosing build or test commands; no application toolchain is defined yet.
+This repository specifies an AI orchestrator: Twenty Workflows own business state; a NestJS worker will execute commands through Codex app-server in a later stage. The private Twenty App data model now lives in `apps/twenty-app/`; use its `.nvmrc`, `package.json`, and `SETUP.md` for App commands. No NestJS worker toolchain is defined yet. Check the current tree before choosing commands.
 
 ## Find the relevant contract
 
