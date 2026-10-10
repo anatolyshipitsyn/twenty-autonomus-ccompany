@@ -1,0 +1,40 @@
+import { defineObject, FieldType, NumberDataType, RelationType } from 'twenty-sdk/define';
+import { FIELD_IDS, OBJECT_IDS } from 'src/constants/schema-identifiers';
+
+export default defineObject({
+  universalIdentifier: OBJECT_IDS.aiRunJournal,
+  nameSingular: 'aiRunJournal',
+  namePlural: 'aiRunJournals',
+  labelSingular: 'AI Run Journal',
+  labelPlural: 'AI Run Journals',
+  icon: 'IconList',
+  labelIdentifierFieldMetadataUniversalIdentifier: FIELD_IDS['aiRunJournal.operationKey'],
+  fields: [
+    { universalIdentifier: FIELD_IDS['aiRunJournal.runKey'], name: 'runKey', label: 'Run Key', type: FieldType.TEXT, isNullable: false, defaultValue: "''" },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.operationKey'], name: 'operationKey', label: 'Operation Key', type: FieldType.TEXT, isNullable: false, defaultValue: "''" },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.sequence'], name: 'sequence', label: 'Sequence', type: FieldType.NUMBER, isNullable: false, defaultValue: 0, universalSettings: { dataType: NumberDataType.INT } },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.direction'], name: 'direction', label: 'Direction', type: FieldType.SELECT, options: [{position:0,label:'COMMAND',value:'COMMAND'},{position:1,label:'EVENT',value:'EVENT'}], isNullable: false, defaultValue: "'COMMAND'" },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.operationType'], name: 'operationType', label: 'Operation Type', type: FieldType.TEXT, isNullable: false, defaultValue: "''" },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.state'], name: 'state', label: 'State', type: FieldType.SELECT, options: [{position:0,label:'PENDING',value:'PENDING'},{position:1,label:'APPLIED',value:'APPLIED'}], isNullable: false, defaultValue: "'PENDING'" },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.payload'], name: 'payload', label: 'Payload', type: FieldType.RAW_JSON, isNullable: false, defaultValue: {} },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.resultCode'], name: 'resultCode', label: 'Result Code', type: FieldType.SELECT, options: [{position:0,label:'OK',value:'OK'},{position:1,label:'ERROR',value:'ERROR'},{position:2,label:'REJECTED',value:'REJECTED'}], isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.workflowRunId'], name: 'workflowRunId', label: 'Workflow Run ID', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.workflowVersionId'], name: 'workflowVersionId', label: 'Workflow Version ID', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.correlationKey'], name: 'correlationKey', label: 'Correlation Key', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.questionId'], name: 'questionId', label: 'Question ID', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.agentKey'], name: 'agentKey', label: 'Agent Key', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.assignmentVersion'], name: 'assignmentVersion', label: 'Assignment Version', type: FieldType.NUMBER, isNullable: true, universalSettings: { dataType: NumberDataType.INT } },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.handoffId'], name: 'handoffId', label: 'Handoff ID', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.threadId'], name: 'threadId', label: 'Thread ID', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.turnId'], name: 'turnId', label: 'Turn ID', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.rpcRequestId'], name: 'rpcRequestId', label: 'RPC Request ID', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.workerId'], name: 'workerId', label: 'Worker ID', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.workspaceRef'], name: 'workspaceRef', label: 'Workspace Ref', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.activeTimeMs'], name: 'activeTimeMs', label: 'Active Time (ms)', type: FieldType.NUMBER, isNullable: true, universalSettings: { dataType: NumberDataType.INT } },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.checkpointAt'], name: 'checkpointAt', label: 'Checkpoint At', type: FieldType.DATE_TIME, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.appliedAt'], name: 'appliedAt', label: 'Applied At', type: FieldType.DATE_TIME, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.lastError'], name: 'lastError', label: 'Last Error', type: FieldType.TEXT, isNullable: true },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.task'], name: 'task', label: 'Task', type: FieldType.RELATION, isNullable: false, relationTargetObjectMetadataUniversalIdentifier: OBJECT_IDS.aiTask, relationTargetFieldMetadataUniversalIdentifier: FIELD_IDS['aiTask.journalEntries'], universalSettings: { relationType: RelationType.MANY_TO_ONE, joinColumnName: 'taskId' } },
+    { universalIdentifier: FIELD_IDS['aiRunJournal.run'], name: 'run', label: 'Run', type: FieldType.RELATION, isNullable: true, relationTargetObjectMetadataUniversalIdentifier: OBJECT_IDS.aiRun, relationTargetFieldMetadataUniversalIdentifier: FIELD_IDS['aiRun.journalEntries'], universalSettings: { relationType: RelationType.MANY_TO_ONE, joinColumnName: 'runId' } }
+  ],
+});

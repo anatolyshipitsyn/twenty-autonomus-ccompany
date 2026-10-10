@@ -1,6 +1,6 @@
 # Data model and lifecycle
 
-Version: 1.2 · Date: 6 October 2026 · Status: Not verified.
+Version: 1.3 · Date: 10 October 2026 · Status: Not verified.
 
 [Русская версия](domain.ru.md) · [All requirements](../requirements.md) · [PRD](../PRD.md)
 
@@ -58,6 +58,8 @@ Version: 1.2 · Date: 6 October 2026 · Status: Not verified.
 
 `DATA-02`: unique indexes protect AI Run.runKey and Journal.operationKey. Redelivery does not change executed operation payload, snapshot, or terminal outcome. Command failure does not authorize re-executing the same key. Recover partial run/task/journal writes; check ambiguous run creation by reading runKey, and block execution on duplicates/unproven outcome. Use a preassigned UUID only if the selected API supports it.
 
+Twenty's native role permissions do not distinguish field writes on record creation from updates to an existing record. The Worker may therefore have update permission for fields needed to create its own Journal events, within its row-level scope. This is an accepted platform limitation, not a server-enforced write-once guarantee. The delivery handler must read and compare an existing operationKey before acting, must not use a full-payload Upsert on redelivery, and must not change an applied or terminal outcome. No custom ingress is required solely to emulate create-only field permissions.
+
 For PUBLISH_PR, distinguish publication identity from command attempt identity:
 
 - `publicationKey` is a stable identifier for publishing one run's validated result, for example `runKey:PUBLISH_PR`. Persist it in Journal payload with repository/base/head.
@@ -67,7 +69,7 @@ For PUBLISH_PR, distinguish publication identity from command attempt identity:
 
 Keep the review, export, and attempt-history audit minimum in the existing AI Run / Journal objects under [OPS-07](operations.md). The technical retention period does not authorize deleting these records while task history is retained.
 
-`DATA-03`: operators can read Journal; workflows write commands and apply events; the worker writes its own events, technical intents/acknowledgements. Manual history edits are limited to audited administrative recovery. Secrets, local paths, and detailed tool logs are not published in user fields; PID alone does not prove process identity.
+`DATA-03`: operators can read Journal; workflows write commands and apply events; the worker writes its own events, technical intents/acknowledgements and technical fields. The Worker role is scoped to its assigned pending records and may update fields that Twenty requires for event creation; Twenty cannot enforce that such fields become immutable after creation. Manual history edits are limited to audited administrative recovery. Secrets, local paths, and detailed tool logs are not published in user fields; PID alone does not prove process identity.
 
 ## 2. State contract
 

@@ -1,18 +1,31 @@
 # Compatibility gate — current findings
 
-Date: 8 October 2026 · Scope: pre-implementation checks in OPS compatibility gate; mapped plan row SAI-13, SAI-18, SAI-20 · Status: **GO — App development may start**
+Date: 10 October 2026 · Scope: pre-implementation checks in OPS compatibility gate; mapped plan row SAI-13, SAI-18, SAI-20 · Status: **Stage 1 GO; Stage 2 Completed**
 
-[Русская версия](compatibility-gate.ru.md) · [Operations contract](../requirements/operations.md) · [Protocol contract](../requirements/protocol.md) · [Acceptance matrix](../requirements/acceptance.md)
+[Русская версия](compatibility-gate.ru.md) · [Stage 2 model evidence](stage-2-data-model.md) · [Operations contract](../requirements/operations.md) · [Protocol contract](../requirements/protocol.md) · [Acceptance matrix](../requirements/acceptance.md)
+
+> Current Stage 2 installation, schema, relation, unique-index, Upsert, and permission evidence is recorded in [Stage 2 data model evidence](stage-2-data-model.md). Older snapshots below describe the state at their dated checks and are superseded for current Stage 2 status by that report.
 
 ## Verdict
 
-The configured self-hosted Twenty server is healthy. Authenticated MCP access works with the locally stored `TWENTY_API_KEY`: the workspace exposes 28 standard object metadata names, one workspace member, two role definitions, and no workflows. The expected `AiTask`, `AiRun`, `AiRunJournal`, and `Project` objects are absent because their Twenty app has not yet been developed and installed; this is expected at the current stage, not evidence of server incompatibility. A scoped Company create/update/read-back/soft-delete probe passed, and follow-up searches found no remaining probe records.
+The selected self-hosted Twenty server is healthy. Stage 1's authenticated MCP and Company checks passed in the primary workspace. Stage 2's private App is now installed in a separate disposable `v2.45.6` workspace; current schema and API findings are summarized in the linked Stage 2 report. The primary Compose workspace was not used for the Stage 2 installation or probes.
 
-The updated gate decision is **GO**: official scaffolding, dependency installation, and the App dev synchronization cycle completed in an isolated temporary project; the selected Twenty `v2.45.6` server, API, Codex handshake, and GitHub access were reachable. App-specific schema/workflows, least-privilege credential behavior, quotas, and full Codex lifecycle remain open for their dependent stages. No app was installed into the configured project workspace. Earlier generic Company and bootstrap probes remain as recorded below; no secret was printed or recorded.
+The Stage 1 decision remains **GO**: official scaffolding, dependency installation, and App dev synchronization completed in an isolated project on `v2.45.8`. For Stage 2, the official scaffold was also synchronized against a disposable isolated app-dev `v2.45.6` target, and the exit probes are complete. Current Stage 2 evidence is linked above.
 
 ## Gate decision and bounded candidate
 
-**Decision: GO for App development; Stage 2 is unblocked and remains Proposed.** The official scaffold resolved `create-twenty-app@latest` to `2.45.0`, installed `twenty-sdk@2.45.0` with Node `24.19.0` / Yarn `4.13.0`, and completed `yarn twenty dev` synchronization against an isolated app-dev server `v2.45.8`. SDK metadata declares Twenty `>=2.40.0`, which includes the selected server `v2.45.6`. Target health/API, Codex initialize handshake, and GitHub repository access also passed in this recheck. The exact SDK sync against `v2.45.6` remains a Stage 2 entry check; the declared version range plus successful sync on `v2.45.8` makes this non-blocking for starting App development. This gate does not close any SAI.
+**Decision: GO for starting App development.** The official scaffold resolved `create-twenty-app@latest` to `2.45.0`, installed `twenty-sdk@2.45.0` with Node `24.19.0` / Yarn `4.13.0`, and completed `yarn twenty dev` synchronization against an isolated app-dev server `v2.45.8`. The exact target sync against `v2.45.6` also passed at Stage 2 entry, as recorded below. This gate does not close any SAI.
+
+## Stage 2 entry check (9 October 2026)
+
+**Result: PASS; Stage 2 is In progress.** An isolated disposable `twentycrm/twenty-app-dev:v2.45.6` container was started at `127.0.0.1:2020`; `/healthz` returned HTTP 200. The official scaffolder `create-twenty-app@2.45.0` created `apps/twenty-app/` using Node `24.19.0` and Yarn `4.13.0`; its lockfile pins the generated SDK packages at `2.45.0`. The official `yarn twenty dev` command completed its initial sync against this exact target: Resources Build, Resources Upload, Manifest Build, Application Synchronization, API Client Generation, and Entities (8 synced) all passed; overall status was Synced. The watch process was then stopped; its shell returned 130 due to that deliberate stop. The primary Compose workspace was not used.
+
+| Finding | Classification | Evidence / next action |
+| --- | --- | --- |
+| Full-payload Journal Upsert overwrites existing immutable fields; a key-only Upsert preserves them. | **Key-only storage path verified; consumer behavior depends on later stages** | On the isolated target, a key-only upsert returned existing payload/resultCode/state/task unchanged; full-payload Upsert changed payload/resultCode. The delivery consumer must compare returned stored values with the incoming payload and avoid re-execution; this belongs to Stage 3/4. See the Stage 2 report. |
+| Runtime permissions for role-assigned credentials remain unverified. | **Blocking Stage 2 exit** | Verify operator, Workflows, and worker credentials in the isolated workspace. Worker currently has object-level Journal update access; field/record restrictions are not proven. |
+
+The exact-version entry check and private App installation passed. Relations, unique duplicate rejection, and immutable readback through the key-only Upsert path passed. Runtime role boundaries with role-assigned credentials remain unverified and prevent Stage 2 exit. Full-payload Upsert is unsafe; consumer-side compare/no-reexecution is a dependent Stage 3/4 check. All 28 SAI IDs and statuses remain unchanged; no SAI is promoted by this evidence.
 
 Record these as the working candidate, not as verified compatibility or approved production configuration:
 
@@ -21,23 +34,23 @@ Record these as the working candidate, not as verified compatibility or approved
 - Codex: `codex-cli 0.160.1`, app-server over stdio, generated experimental schema SHA-256 `e77b7d1436a78f431a74b2cb263a862e92ae40d70411bc63835b47ab2168827c`. This is a protocol candidate only; app-server is labeled experimental.
 - Topology: one host, one worker, one isolated non-production Twenty workspace, `concurrency=1`; keep the worker and app-server on the same host. The observed local Compose endpoint was `127.0.0.1:3000`. No remote/production topology is selected.
 - Repository policy: candidate repository `anatolyshipitsyn/twenty-autonomus-ccompany`, `main` as base, task branches and reviewable PRs for delivery. Keep the app private and install only into an isolated non-production workspace. `gh` authenticated as `anatolyshipitsyn`; `gh api` confirmed repository `push` permission.
-- Credentials: inject a dedicated non-production Twenty API key and GitHub credential from host-managed secret storage at runtime; do not commit credentials or copy them into Journal/analytics. Use least privilege. The existing local MCP key's role and privilege scope are unknown, so it is not approved as the App runtime credential.
+- Credentials: the isolated app-dev API key was rotated and is stored in host-managed Keychain; no value is recorded in Git or Notion. Use credentials assigned to least-privilege roles for permission probes. The primary MCP key is not reused for the app-dev target.
 - Deployment: no production deployment target is configured. No production rollout, HA, or remote worker is part of this candidate. Production deployment requires a separate configuration and review.
 
 ## Open issues and disposition
 
 | Issue | Class | Why / dependent check |
 | --- | --- | --- |
-| Exact official SDK sync against selected server `v2.45.6` has not yet been run; the successful sync used app-dev server `v2.45.8`. | **Non-blocking for starting App development** | SDK `2.45.0` declares Twenty `>=2.40.0`, and scaffold build/upload/synchronization passed on `v2.45.8`; repeat `yarn twenty dev` against `v2.45.6` at Stage 2 entry before app-specific schema work/install. |
+| Native Journal Upsert overwrites immutable payload/result, and runtime role boundaries are unverified. | **Blocking Stage 2 exit** | The isolated `v2.45.6` target accepted duplicate-key rejection but Upsert changed the existing payload and resultCode. Verify a supported immutable redelivery path and run role-assigned permission probes. |
 | API-key role binding/least-privilege and workspace plan/quotas are not exposed by the current MCP toolset. | **Non-blocking for App development** | Build in the isolated app-dev environment; before installing/using the App on the selected workspace, verify a dedicated least-privilege key and denied unauthorized operations at Stage 2, and read plan/quota limits before enabling workflows/recovery in Stage 3/5. |
 | Codex app-server is experimental; only initialize/EOF are evidenced, and persistent thread/turn behavior is not established. | **Non-blocking for App development** | App schema can be developed independently. Before Stage 4 worker integration, pin the protocol/schema and verify persistent thread, turn, question/answer, interrupt, history reconciliation, and shutdown without replay. If experimental status is unacceptable for the pilot, record a protocol change before Stage 4. |
-| API-key role binding and least-privilege behavior are unknown; the inspected roles are broad. | **Non-blocking for App development** | Do not reuse the existing MCP key as the worker credential. Verify a dedicated least-privilege key and denied unauthorized operations in the Stage 2 isolated workspace before App install/use. |
+| Role-boundary enforcement for app-dev remains unverified. | **Blocking Stage 2 exit** | Use credentials assigned to each app role and verify denied unauthorized operations; do not infer runtime behavior from the role manifest. |
 | Workspace plan/quotas and server-side SDK helper availability are unknown. | **Non-blocking for App development** | Read the selected plan and run quota/helper probes in Stage 3/5 before enabling workflows and recovery; do not infer plan behavior from the candidate SDK's static metadata. |
-| Contract schema, indexes, duplicate rejection, Upsert, and four workflows have no runtime evidence because the App does not exist. | **Non-blocking for this gate** | Verify schema/indexes/Upsert on Stage 2 exit and workflow branches/concurrency on Stage 3 exit in the isolated workspace. |
+| Native Upsert overwrites immutable Journal fields. | **Blocking Stage 2 exit** | Resolve DATA-02 redelivery behavior and repeat the runtime probe on the selected target. Workflow branches/concurrency remain Stage 3 checks. |
 | Backup/restore and full Codex lifecycle are untested; production deployment is unconfigured. | **Non-blocking for App development** | Verify restore in Stage 5 and full pilot lifecycle in Stage 7. Production remains outside this candidate until separately configured and reviewed. |
 | Langfuse is not selected. | **Non-blocking for App development** | Decide/defer analytics and validate export/recovery in Stage 6; its failure must remain asynchronous under OPS-17. |
 
-There are no known blockers to starting App development. Stage 1 is **Completed — GO**; Stage 2 is **Proposed and unblocked**, not yet started. Exact target sync, app schema/workflows, quotas, backup, and full-turn checks remain assigned to their dependent stages. SAI-13, SAI-18, and SAI-20 remain **Not verified**.
+Stage 1 is **Completed — GO** and authorized App development. Stage 2 is **In progress**: installation, schema/relation readback, and unique duplicate rejection passed; Upsert immutability and runtime permissions block exit. Workflow checks remain in Stage 3; worker write-boundary integration remains in Stage 4. All 28 SAI statuses remain **Not verified**.
 
 ## Current-session recheck (8 October 2026)
 
@@ -68,11 +81,11 @@ There are no known blockers to starting App development. Stage 1 is **Completed 
 | Requirement | Check and observed result | Assessment |
 | --- | --- | --- |
 | SAI-13 — target server/API | Current `docker compose ps` shows `v2.45.6`; server, PostgreSQL, and Redis are healthy, and worker is running. `GET /healthz` returned HTTP 200 and `{"status":"ok",...}`. Earlier unauthenticated GraphQL `POST /graphql` with `{__typename}` returned HTTP 200 and `Query`. | **Partial.** Proves current health and endpoint reachability, plus earlier basic GraphQL reachability only. |
-| SAI-13 — workspace schema and permissions | Authenticated MCP returned 28 standard object metadata names; targeted metadata queries for `AiTask`, `AiRun`, `AiRunJournal`, and `Project` returned no matches. These objects are supplied by the app, which is not yet developed or installed, so their absence is expected. One workspace member was found. `list_roles` returned Admin and Member; both have global read/update/delete/destroy access and all tools, with no object-level rules. API-key role assignment and plan are not exposed. | **Partial.** MCP access and standard workspace metadata are verified; app-defined schema and least-privilege/key binding and plan remain to be verified after implementation and installation. |
+| SAI-13 — workspace schema and permissions | Authenticated app-dev metadata/schema readback returned the installed `Project`, `AiTask`, `AiRun`, and `AiRunJournal` objects and expected fields/relations. App role definitions scope operator to Journal read, Workflows to task/run/journal, and worker to Journal. Runtime role-assigned credential checks were not performed; the probe credential's effective role was not established. | **Partial.** App schema is installed and read back; least-privilege enforcement is not verified. SAI remains `Not verified`. |
 | SAI-13 — SDK/server compatibility | Generated SDK `2.45.0` declares `>=2.40.0`; selected server `v2.45.6` is in range; official scaffold sync passed on `v2.45.8`. | **Partial.** Exact sync against `v2.45.6` is a Stage 2 entry check; this gate does not close SAI. |
-| SAI-13 / SAI-18 — unique keys | SDK source accepts `isUnique` for scalar fields and rejects it for relation/files fields; a source unit test covers unique text fields. | **Static evidence only.** No app was installed and duplicate-key rejection was not exercised on the running database. Source examined is the separate `twenty` checkout at the snapshot above, not the running `v2.45.6` source tag. |
-| SAI-18 — record writes | Authenticated MCP Company probe passed create, update, read-back, soft-delete, and post-delete search (0 visible probe rows). | **Partial.** Confirms generic Company CRUD only; contract-object writes, unique indexes, duplicate rejection, relations, and Upsert/redelivery remain unverified. |
-| SAI-18 — Upsert | The checked-out server source contains REST and GraphQL `upsert` request handling. | **Static evidence only.** Idempotency, immutable outcomes, duplicate delivery, and Upsert behavior were not run against the target server. |
+| SAI-13 / SAI-18 — unique keys | Installed target rejected duplicate creates for `AiRun.runKey` and `AiRunJournal.operationKey` with unique-constraint violations. Disposable records were deleted. | **Runtime partial.** Duplicate rejection passed; SAI remains `Not verified` because other acceptance behavior is incomplete. |
+| SAI-18 — record writes and relations | GraphQL create/readback confirmed Project→AiTask, AiTask→AiRun, and task/run→Journal links; all temporary records were deleted. | **Runtime partial.** Relation writes/readback passed; broader workflow acceptance remains untested. |
+| SAI-18 — Upsert | Target GraphQL `createAiRunJournal(..., upsert:true)` accepted a repeated operationKey but changed `payload` from `immutable-v1` to `immutable-v2` and `resultCode` from `OK` to `ERROR`. | **Runtime failure against DATA-02.** Native Upsert does not preserve payload/terminal outcome; Stage 2 remains blocked. SAI status is unchanged. |
 | SAI-18 — workflows and concurrency | Authenticated MCP `list_workflows` returned 0 workflows. | **Not verified.** IF/else behavior, four-workflow triggers, serialization, concurrent Dispatch, permissions, and absence of workflow storms need a test workspace. |
 | SAI-20 — plan, quotas, and SDK helpers | Workspace plan and quotas are not exposed by the current authenticated MCP toolset. | **Not verified.** Quota behavior and SDK helper availability on this server/plan were not tested. |
 | Codex protocol portion of SAI-13 | `codex app-server --stdio` accepted `initialize` and `initialized`, returned an initialize response without an error, and exited 0 on EOF; the generated schema contains `thread/start`, `thread/read`, `turn/start`, and `turn/interrupt`. An isolated `thread/start` returned `ephemeral=false`, but without a turn no rollout file was created and `thread/list` returned 0 after process restart (including `appServer` source filtering). | **Partial.** Handshake and EOF process exit passed. Thread/history persistence is not verified: the no-turn probe is inconclusive, and no authenticated model turn, question/answer, interrupt, history reconciliation, or shutdown during an active turn was run. The app-server is explicitly experimental. |
@@ -101,16 +114,18 @@ There are no known blockers to starting App development. Stage 1 is **Completed 
 
 ## Remaining evidence needed
 
-- Develop the Twenty app that defines `AiTask`, `AiRun`, `AiRunJournal`, `Project`, and the required workflows; preserve the generated SDK versions in its lockfile and run the exact sync against `v2.45.6` at Stage 2 entry.
-- Install the app in a non-production workspace, then verify its schema, relations, scalar unique indexes, duplicate rejection, Upsert/redelivery behavior, and permissions. The current MCP credential can write standard Company records; its assigned role and least-privilege posture still need independent verification.
+- Resolve the observed DATA-02 native Upsert overwrite behavior and verify immutable redelivery on isolated `v2.45.6`.
+- Verify role boundaries using credentials assigned to operator, Workflows, and worker roles; confirm worker cannot update business lifecycle or unrelated Journal records/fields.
 - Run the four workflow probes, including concurrent Dispatch, IF/else, scheduler behavior, and heartbeat storm prevention.
 - Read the selected workspace plan and exercise relevant quota/rate-limit behavior.
 - Pin the Codex CLI/app-server protocol and test a persistent thread, turn lifecycle, questions, interrupt, history reconciliation, and process shutdown without replaying execution.
 - At Stage 6, choose the Langfuse deployment and SDK/API version or record that analytics are deferred.
 
-Stage 1 is complete with **GO**; Stage 2 is unblocked and remains **Proposed**. SAI-13, SAI-18, and SAI-20 remain **Not verified**: this gate confirms readiness to start development, not pilot integration acceptance.
+Historical snapshot from 8 October: Stage 1 was complete with **GO** and Stage 2 was unblocked/Proposed. The 9 October exact-version entry check supersedes that status: Stage 2 is now **In progress**, blocked on the dedicated credential and exact sync. SAI-13, SAI-18, and SAI-20 remain **Not verified**.
 
 ## Coverage of the full OPS gate
+
+The table below is the pre-installation snapshot; use the current [Stage 2 data model evidence](stage-2-data-model.md) for the installed app and runtime probes.
 
 The operations contract lists a broader pre-implementation gate than the three SAI IDs attached to the Stage 1 planning row. This report does not mark the gate complete based on that row alone.
 
@@ -130,3 +145,13 @@ The operations contract lists a broader pre-implementation gate than the three S
 | Long Codex execution on the host; worker-to-Twenty topology | No orchestrator worker exists; deployment topology is not configured | Not verified |
 
 The planning record in Notion previously said “full gate — all 28 SAI”. The owner clarified the scope in the 8 October request: OPS defines the pre-implementation gate, while all 28 SAI remain pilot integration criteria. The matching Notion open question is now resolved to that scope; no SAI status is changed here.
+
+## Stage 2 entry recheck (9 October 2026)
+
+This historical entry record is superseded by the current [Stage 2 data model evidence](stage-2-data-model.md).
+
+- Started isolated disposable `twentycrm/twenty-app-dev:v2.45.6` as `twenty-stage2-appdev-v2456`, bound only to `127.0.0.1:2020`. `GET /healthz` returned HTTP 200. The primary Compose workspace was not used.
+- Official scaffolder `create-twenty-app@2.45.0` generated `apps/twenty-app/` using Node `24.19.0` and Yarn `4.13.0`. `package.json` pins `twenty-sdk`, `twenty-client-sdk`, and `twenty-ui` to `2.45.0`; `yarn.lock` records those exact package versions. The `twenty` CLI binary is provided by the pinned `twenty-sdk@2.45.0`.
+- An initial scaffold attempt against `http://host.docker.internal:2020` selected OAuth. A later official `yarn twenty dev` run against the local Docker target completed successfully; see the entry-check result above. During subsequent UI verification, an automation snapshot exposed the used API key in tool output. The value is not reproduced or recorded; the user authorized rotation and must perform the credential change under browser handoff policy.
+- Read-only inspection of primary workspace Settings → MCP & APIs identified the `.env` credential entry as `Codex Local MCP`, Role `Admin`, Expiration `Never`. A read-only probe transmitting this primary Admin key to the separate disposable app-dev container was rejected by automatic approval review because its authorization/scope on that separate workspace is unverified. No transfer or probe occurred; no workaround was attempted.
+- Stage 2 remains **In progress**. The credential was rotated and saved to host-managed Keychain; no secret was included in repository or knowledge-base records. Current installation and probe results, including the DATA-02 Upsert failure, are recorded in the Stage 2 report. All 28 SAI IDs and statuses are unchanged.
